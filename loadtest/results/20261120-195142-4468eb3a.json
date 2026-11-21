@@ -1,0 +1,24 @@
+{
+  "label": "1 worker, kafka 20000/s, 2% match",
+  "run": "4468eb3a",
+  "source": "kafka",
+  "events_sent": 300000,
+  "target_rate": 20000,
+  "achieved_send_rate": 19993,
+  "send_errors": {
+    "webhook": 0,
+    "kafka": 0
+  },
+  "events_matched_expected": 6001,
+  "events_matched_counted": 6001,
+  "deliveries_expected": 6001,
+  "deliveries_done": 6001.0,
+  "deliveries_outstanding": 0.0,
+  "processed_events_per_second": 16986,
+  "latency_ms": {
+    "p50_ms": 1594.0,
+    "p99_ms": 2890.7,
+    "max_ms": 3304.1
+  },
+  "complete": true
+}

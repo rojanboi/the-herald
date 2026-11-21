@@ -1,0 +1,18 @@
+# Problems reported by a person in plain words ("Report a problem" in the UI), not by a system.
+# They go to the support team; support hands the alert to an engineer when one is needed.
+id: support-problem-reported-by-a-person
+owner: team:counterparty-support
+name: Problem reported by a person
+when:
+  all:
+    - {field: type, op: eq, value: USER_REPORT}
+present:
+  title: "{{system}}: {{summary}}"
+  body: "{{message}}"
+  fields: [system, impact, reporter, reported_at]
+  highlight: [impact]
+group:
+  by: [report_id]
+notify:
+  - to: team:counterparty-support
+    channels: [ui, email]

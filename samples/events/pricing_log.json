@@ -1,0 +1,8 @@
+{
+  "timestamp": "2026-10-23T09:15:01Z",
+  "level": "WARN",
+  "logger": "pricing-engine-3",
+  "instrument": "EURUSD",
+  "latency_ms": 1840,
+  "message": "Quote latency above threshold"
+}

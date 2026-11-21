@@ -1,0 +1,44 @@
+# Template following the response stages in docs/INCIDENT-PLAYBOOK.md. Copy into config/runbooks/ and
+# replace the {{placeholders}} with fields from your events. `template`, `repeat_every` and `due_within`
+# are stored with the step and shown; the service does not act on them yet.
+name: business-event-decision
+applies_to: rule.type == business
+steps:
+  - text: "Acknowledge and read the details: {{title}}. Amount or count: {{amount}}; account or segment: {{segment}}"
+    kind: manual
+    approval: none
+  - text: "Assess: what is the exposure, who is affected, is there a regulatory or customer-data aspect, how long until it matters ({{deadline}})?"
+    kind: manual
+    approval: none
+  - text: "Tell the decision owner what is happening and what they must decide, by when"
+    kind: action
+    action: escalate
+    params: { target: "{{decision_owner}}", reason: "{{key}} decision needed by {{deadline}}" }
+    approval: none
+  - text: "Gather facts: open the case view"
+    kind: check
+    action: http_get
+    params: { url: "{{case_url}}" }
+    approval: none
+  - text: "Decision: approve, reject or hold. Write the reason in the note box"
+    kind: manual
+    approval: role:team-lead
+  - text: "If approved, release or continue the process"
+    kind: action
+    action: webhook
+    params: { url: "{{release_url}}", method: POST, body: { case: "{{case_id}}", decision: "approved" } }
+    condition: "decision == approved"
+    approval: role:team-lead
+  - text: "If rejected or held, create a ticket for the follow-up"
+    kind: action
+    action: open_ticket
+    params: { title: "{{key}} follow-up: {{title}}", owner: "{{team}}" }
+    condition: "decision != approved"
+    approval: none
+  - text: "Inform affected parties internally with the outcome, using the status-update template"
+    kind: manual
+    template: status_update
+    approval: none
+  - text: "Review afterwards: was the alert useful, was anything missing from this runbook?"
+    kind: manual
+    approval: none

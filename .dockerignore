@@ -1,0 +1,12 @@
+.venv
+.git
+__pycache__
+*.pyc
+*.JPG
+docs
+tests
+.pytest_cache
+.ruff_cache
+
+ui-ads
+ui-flow

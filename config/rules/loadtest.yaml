@@ -1,0 +1,17 @@
+# Used only by loadtest/run.py. Every event with a distinct `key` is its own alert,
+# delivered through the fake SMS gateway so ingest-to-delivery latency is measured end to end.
+id: loadtest
+owner: team:loadtest
+name: Load test events
+when:
+  all:
+    - {field: type, op: eq, value: LOADTEST}
+    - {field: match, op: eq, value: true}
+severity: info
+present:
+  title: "Load test {{key}}"
+group:
+  by: [key]
+notify:
+  - to: team:loadtest
+    channels: [sms]

@@ -1,0 +1,28 @@
+# Anna, personal (from the brief): anything critical from payments-api -> SMS, but only
+# between 08:00 and 20:00; otherwise email.
+id: anna-payments-critical
+owner: person:anna
+name: Anything critical from payments-api
+when:
+  all:
+    - {field: "@service", op: eq, value: payments-api}
+    - {field: "@severity", op: severity_gte, value: critical}
+present:
+  title: "{{alertname}} on {{labels.service}} ({{labels.region}})"
+  body: "{{annotations.summary}}"
+  fields: [labels.service, labels.region, labels.severity, startsAt]
+  colour: red
+group:
+  by: [alertname, labels.service, labels.region]
+notify:
+  - to: person:anna
+    channels: [sms]
+    hours: {from: "08:00", to: "20:00", tz: Europe/London}
+    else: [email]
+  - to: person:anna
+    channels: [ui]
+runbook: payments-high-error-rate
+resolve_when:
+  all:
+    - {field: "@service", op: eq, value: payments-api}
+    - {field: status, op: eq, value: resolved}

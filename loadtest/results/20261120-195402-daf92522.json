@@ -1,0 +1,24 @@
+{
+  "label": "4 workers, kafka 2000/s, 50% match",
+  "run": "daf92522",
+  "source": "kafka",
+  "events_sent": 30000,
+  "target_rate": 2000,
+  "achieved_send_rate": 1999,
+  "send_errors": {
+    "webhook": 0,
+    "kafka": 0
+  },
+  "events_matched_expected": 15001,
+  "events_matched_counted": 15001,
+  "deliveries_expected": 15001,
+  "deliveries_done": 15001.0,
+  "deliveries_outstanding": 0.0,
+  "processed_events_per_second": 1996,
+  "latency_ms": {
+    "p50_ms": 26.1,
+    "p99_ms": 841.1,
+    "max_ms": 1021.8
+  },
+  "complete": true
+}

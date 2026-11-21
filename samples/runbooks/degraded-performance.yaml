@@ -1,0 +1,52 @@
+# Template following the response stages in docs/INCIDENT-PLAYBOOK.md. Copy into config/runbooks/ and
+# replace the {{placeholders}} with fields from your events. `template`, `repeat_every` and `due_within`
+# are stored with the step and shown; the service does not act on them yet.
+name: degraded-performance
+applies_to: severity in [warning, error]
+steps:
+  - text: "Check the current value of {{metric}} against threshold {{threshold}}"
+    kind: check
+    action: http_get
+    params: { url: "{{metrics_url}}" }
+    approval: none
+  - text: "Assess: is it getting worse, how many users see it, is there a workaround?"
+    kind: manual
+    approval: none
+  - text: "Decide severity. If many users or core function affected, raise to critical and switch to the outage runbook"
+    kind: manual
+    approval: none
+  - text: "Post initial internal note for {{key}} to {{team}}: what is slow, since {{first_seen}}, next update time"
+    kind: manual
+    template: status_update
+    due_within: 30
+    approval: none
+  - text: "Ask for a second pair of eyes if not improving"
+    kind: action
+    action: escalate
+    params: { target: "{{team_lead}}" }
+    condition: "minutes_since_first_seen > 30 and alert.status == acked"
+    approval: none
+  - text: "Retry the stalled job or workflow if one is shown in the event"
+    kind: action
+    action: retry_workflow
+    params: { workflow: "{{workflow_id}}" }
+    condition: "event.workflow_id is not None"
+    approval: required
+  - text: "Wait and re-check"
+    kind: wait
+    action: wait
+    params: { minutes: 15 }
+    approval: none
+  - text: "Re-check the metric; note observation and what you changed"
+    kind: check
+    action: http_get
+    params: { url: "{{metrics_url}}" }
+    approval: none
+  - text: "Post update (current status, next steps, next update)"
+    kind: manual
+    template: status_update
+    repeat_every: 60
+    approval: none
+  - text: "On recovery, post a one-line resolution note and record what fixed it so the runbook can improve"
+    kind: manual
+    approval: none

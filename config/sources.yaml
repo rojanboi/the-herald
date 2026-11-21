@@ -1,0 +1,36 @@
+# Where events come from. Adding a source is an entry here; a new source *type* is one
+# adapter class in alertsvc/sources/. No `map` is needed for a rule to work on raw paths:
+# it only overrides how the four aliases (@type, @severity, @timestamp, @service) are filled.
+sources:
+  - id: workflow-events
+    name: Workflow engine
+    icon: workflow
+    type: kafka
+    topic: workflow.events
+
+  - id: trade-events
+    name: Trade gateway
+    icon: trade
+    type: kafka
+    topic: trade.events
+
+  - id: metrics-webhook
+    name: Monitoring
+    icon: monitoring
+    type: webhook
+    token_env: HERALD_TOKEN_METRICS_WEBHOOK
+
+  - id: generic-webhook
+    name: Generic webhook
+    icon: webhook
+    type: webhook
+    token_env: HERALD_TOKEN_GENERIC_WEBHOOK
+
+  - id: pricing-logs
+    name: Pricing engine
+    icon: logs
+    type: logtail
+    path: /var/log/herald/pricing.log
+    map:
+      service: logger
+      severity: level

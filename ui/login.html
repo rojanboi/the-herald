@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="same-origin">
+<title>Sign in · Herald</title>
+<style>
+/* Sign-in page. Same tokens and fonts as index.html; everything inline, no external requests. */
+:root{
+  color-scheme:light;
+  --bg:#ffffff; --surface:#ffffff; --sunk:#f7f8f9; --ink:#172b4d; --muted:#626f86; --line:#dcdfe4;
+  --accent:#262B5E; --accent-ink:#ffffff; --accent-soft:#E9EAF5;
+  --crit:#ae2e24; --crit-soft:#ffeceb; --warn:#7f5f01; --warn-soft:#fff7d6; --info:#3B4283; --info-soft:#E9EAF5; --grey:#44546f;
+  --neutral:rgba(9,30,66,.06); --neutral-h:rgba(9,30,66,.14);
+  --shadow:0 8px 12px rgba(9,30,66,.15),0 0 1px rgba(9,30,66,.31);
+  --font-body:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Ubuntu,system-ui,"Helvetica Neue",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;min-height:100dvh;background:var(--sunk);color:var(--ink);font:14px/1.43 var(--font-body);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+h1,p{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ic{width:20px;height:20px;fill:currentColor;flex:none}
+.ic.sm{width:16px;height:16px}
+
+.card{width:min(400px,100%);background:var(--surface);border-radius:8px;box-shadow:var(--shadow);padding:40px 40px 28px;display:flex;flex-direction:column;gap:24px}
+.brand{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--ink)}
+.brand b{font:600 20px/1 var(--font-body)}
+.logo{width:28px;height:28px;border-radius:6px;background:var(--accent);color:#fff;display:grid;place-items:center}
+.head{display:flex;flex-direction:column;gap:6px;text-align:center}
+h1{font:600 20px/24px var(--font-body);letter-spacing:-.01em}
+.sub{color:var(--muted);text-wrap:balance}
+
+/* Section message (Atlassian style) */
+.msg{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px;padding:12px 14px;border-radius:3px;background:var(--info-soft)}
+.msg .ic{color:var(--info);margin-top:1px}
+.msg.error{background:var(--crit-soft)} .msg.error .ic{color:var(--crit)}
+.msg.warning{background:var(--warn-soft)} .msg.warning .ic{color:var(--warn)}
+.msg b{display:block;font-weight:600}
+.msg p{margin-top:2px}
+.msg .act{margin-top:8px}
+
+/* Provider buttons */
+.providers{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
+.pbtn{position:relative;display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;padding:10px 44px;
+  border:1px solid #b3b9c4;border-radius:3px;background:var(--surface);color:var(--ink);font:600 14px/20px var(--font-body);
+  text-decoration:none;cursor:pointer;text-align:center}
+.pbtn:hover{background:var(--sunk);border-color:#8590a2}
+.pbtn:active{background:var(--neutral-h)}
+.pbtn .pic{position:absolute;left:14px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:20px;height:20px;color:var(--grey)}
+.pbtn[aria-disabled="true"]{pointer-events:none;color:var(--muted)}
+.skel{height:44px;border-radius:3px;background:var(--neutral)}
+@media (prefers-reduced-motion:no-preference){ .skel{animation:pulse 1.4s ease-in-out infinite} @keyframes pulse{50%{opacity:.45}} }
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border:0;border-radius:3px;background:var(--neutral);color:var(--ink);font:500 14px var(--font-body);cursor:pointer;text-decoration:none}
+.btn:hover{background:var(--neutral-h)}
+.btn.pri{background:var(--accent);color:var(--accent-ink)} .btn.pri:hover{background:#1B1F45}
+
+/* "or" divider and the emergency-account form (Atlassian text fields) */
+.or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px;line-height:16px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.pwform{display:flex;flex-direction:column;gap:12px;margin:0}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font:600 12px/16px var(--font-body);color:var(--muted)}
+.field .box{position:relative;display:flex}
+.field input{width:100%;height:40px;padding:0 10px;border:2px solid var(--line);border-radius:3px;background:var(--sunk);color:var(--ink);font:14px var(--font-body)}
+.field input:hover{background:#f1f2f4}
+.field input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.field input.code{letter-spacing:.3em;font-variant-numeric:tabular-nums}
+.field .reveal{position:absolute;right:4px;top:4px;height:32px;padding:0 8px;border:0;border-radius:3px;background:transparent;color:var(--muted);font:500 12px var(--font-body);cursor:pointer}
+.field .reveal:hover{background:var(--neutral)}
+.field small{color:var(--muted);font-size:12px;line-height:16px}
+.pwform .btn.pri{height:40px;font-weight:600}
+.pwform .btn[disabled]{opacity:.6;cursor:default}
+.pwhint{color:var(--muted);font-size:12px;line-height:16px}
+
+.foot{display:flex;gap:8px;align-items:flex-start;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;line-height:16px}
+.foot .ic{color:var(--muted);margin-top:0}
+
+@media (max-width:440px){ .card{padding:32px 24px 24px;gap:20px} }
+/* ---- Sign-in design from the brandbook ("Login C · Card"): a white card on the left, the trumpeter behind it.
+        This layer comes last and only restyles; the sign-in logic below is unchanged. ---- */
+@font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:100 700;font-display:swap;src:url(/brand/fonts/ibm-plex-sans-latin.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url(/brand/fonts/ibm-plex-mono-500-latin.woff2) format("woff2")}
+@font-face{font-family:Dayohe;font-style:normal;font-weight:400;font-display:swap;src:url(/brand/fonts/dayohe.ttf) format("truetype")}
+:root{--ink:#14243B;--muted:#5B6270;--grey:#4A5262;--line:#E4E6EC;--accent:#262B5E;--font-body:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+body{background:#F3F3F7;align-items:flex-start;justify-content:center;gap:0;padding:clamp(12px,4vw,64px);font:16px/1.5 var(--font-body);-webkit-font-smoothing:antialiased}
+herald-trumpeter{display:block}
+.art-wide{position:fixed;inset:0;z-index:0}
+.art-narrow{display:none;position:relative;height:min(36vh,300px);margin:calc(-1*clamp(12px,4vw,64px)) calc(-1*clamp(12px,4vw,64px)) 12px;align-self:stretch}
+.card{position:relative;z-index:1;width:min(480px,100%);border:1px solid #E4E6EC;border-radius:0;box-shadow:0 1px 2px rgba(20,36,59,.06),0 16px 48px rgba(20,36,59,.10);padding:clamp(24px,4vw,48px);gap:0}
+.brand{justify-content:flex-start;margin-bottom:36px} .brand img{display:block;height:clamp(32px,3.2vw,40px);width:auto}
+.head{text-align:left;gap:12px}
+h1{font:400 clamp(36px,4vw,44px)/1.05 Dayohe,Georgia,serif;letter-spacing:0;color:#262B5E}
+.sub{font-size:16px;line-height:1.5;color:#4A5262;text-wrap:pretty}
+.msg{margin-top:24px;border-radius:0;font-size:14px;line-height:1.45}
+.providers{margin-top:28px}
+.pbtn{min-height:52px;padding:15px 48px;border:1px solid #262B5E;border-radius:0;font:600 15px/1.2 var(--font-body);color:#14243B}
+.pbtn:hover{background:#F2F3F9;border-color:#262B5E}
+.pbtn .pic{left:16px;color:#262B5E}
+.skel{height:52px;border-radius:0}
+.or{margin:28px 0 20px;gap:14px;font-size:14px;line-height:1.3;color:#5B6270} .or::before,.or::after{background:#DCDFE6}
+.pwform{gap:18px}
+.field{gap:8px} .field label{font:600 14px/1.2 var(--font-body);color:#4A5262}
+.field input{height:auto;padding:13px 14px;border:1px solid #C9CCD6;border-radius:0;background:#F7F8FA;font:400 16px/1.2 var(--font-body)}
+.field input:hover{background:#F7F8FA}
+.field input:focus{border-color:#262B5E;background:#fff;box-shadow:0 0 0 3px rgba(38,43,94,.14)}
+.field input#p{padding-right:72px!important}
+.field input.code{font:500 18px/1.2 "IBM Plex Mono",ui-monospace,monospace;letter-spacing:.3em;padding:12px 14px}
+.field .reveal{right:4px;top:50%;transform:translateY(-50%);height:auto;padding:10px 12px;font:500 14px/1 var(--font-body);color:#4A5262;border-radius:0} .field .reveal:hover{background:none;color:#262B5E}
+.field small{font-size:14px;line-height:1.45;color:#5B6270}
+.pwform .btn.pri{height:auto;padding:16px;margin-top:6px;border-radius:0;font:600 16px/1 var(--font-body);background:#262B5E} .pwform .btn.pri:hover{background:#1B1F45}
+.pwhint{font-size:14px;line-height:1.5;color:#5B6270}
+.foot{margin-top:28px;gap:12px;font-size:14px;line-height:1.5;color:#5B6270;border-top:1px solid #E4E6EC}
+@media (max-width:759px){ body{align-items:stretch;justify-content:flex-start} .art-wide{display:none} .art-narrow{display:block} .card{width:100%} }
+</style>
+<script src="/brand/herald-trumpeter.js" defer></script>
+</head>
+<body>
+<!-- Icons: Fluent UI System Icons by Microsoft, MIT licence (see fluent-icons-LICENSE.txt). The Microsoft logo is used only on the Microsoft sign-in button. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-alert_f" viewBox="0 0 24 24"><path d="M9.04 19h5.92a3 3 0 0 1-5.92 0M12 2a7.5 7.5 0 0 1 7.5 7.5v4l1.42 3.16a.95.95 0 0 1-.87 1.34H3.95a.95.95 0 0 1-.86-1.34L4.5 13.5V9.24A7.5 7.5 0 0 1 12 2"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><path d="M18.25 7C18.25 7.69 17.69 8.25 17 8.25C16.31 8.25 15.75 7.69 15.75 7C15.75 6.31 16.31 5.75 17 5.75C17.69 5.75 18.25 6.31 18.25 7ZM15.5 2.05C11.88 2.05 8.95 4.99 8.95 8.6C8.95 8.99 9 9.36 9.06 9.7C9.08 9.81 9.04 9.89 8.99 9.95L2.75 16.18C2.24 16.7 1.95 17.4 1.95 18.13V20.3C1.95 21.27 2.73 22.05 3.7 22.05H6.2C7.17 22.05 7.95 21.27 7.95 20.3V19.05H9.7C10.39 19.05 10.95 18.49 10.95 17.8V16.05H12.7C13.37 16.05 13.92 15.52 13.95 14.85C14.45 14.97 14.97 15.05 15.5 15.05C19.11 15.05 22.05 12.11 22.05 8.5C22.05 4.87 19.1 2.05 15.5 2.05ZM10.45 8.6C10.45 5.81 12.71 3.55 15.5 3.55C18.3 3.55 20.55 5.73 20.55 8.5C20.55 11.29 18.29 13.55 15.5 13.55C14.82 13.55 14.12 13.38 13.49 13.11C13.26 13.01 13 13.03 12.79 13.17C12.58 13.31 12.45 13.55 12.45 13.8V14.55H10.7C10.01 14.55 9.45 15.11 9.45 15.8V17.55H7.7C7.01 17.55 6.45 18.11 6.45 18.8V20.3C6.45 20.44 6.34 20.55 6.2 20.55H3.7C3.56 20.55 3.45 20.44 3.45 20.3V18.13C3.45 17.8 3.58 17.48 3.82 17.24L10.05 11.01C10.47 10.59 10.63 10 10.54 9.44C10.48 9.14 10.45 8.86 10.45 8.6Z"/></symbol>
+<symbol id="i-error_circle" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20m0 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17m0 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2M12 7c.37 0 .69.28.74.65v4.6a.75.75 0 0 1-1.48.1l-.01-.1v-4.5c0-.41.33-.75.74-.75"/></symbol>
+<symbol id="i-warning" viewBox="0 0 24 24"><path d="M9.14 3.7a3.25 3.25 0 0 1 5.72 0l6.74 12.5a3.25 3.25 0 0 1-2.86 4.8H5.25a3.25 3.25 0 0 1-2.86-4.8zm4.4.72a1.75 1.75 0 0 0-3.08 0L3.7 16.92a1.75 1.75 0 0 0 1.54 2.58h13.5a1.75 1.75 0 0 0 1.53-2.58zM12 15a1 1 0 1 1 0 2 1 1 0 0 1 0-2m0-7.5c.41 0 .75.34.75.75v4.5a.75.75 0 0 1-1.5 0v-4.5c0-.41.34-.75.75-.75"/></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20m0 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17m0 7c.41 0 .75.34.75.75v5a.75.75 0 0 1-1.5 0v-5c0-.41.34-.75.75-.75M12 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></symbol>
+<symbol id="i-lock_closed" viewBox="0 0 24 24"><path d="M12 1a5 5 0 0 1 5 5v2.01c1.68.13 3 1.53 3 3.24v7.5c0 1.8-1.46 3.25-3.25 3.25h-9.5A3.25 3.25 0 0 1 4 18.75v-7.5a3.25 3.25 0 0 1 3-3.24V6a5 5 0 0 1 5-5M7.25 9.5c-.97 0-1.75.78-1.75 1.75v7.5c0 .97.78 1.75 1.75 1.75h9.5c.97 0 1.75-.78 1.75-1.75v-7.5c0-.97-.78-1.75-1.75-1.75zM12 13.75a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5M12 2.5A3.5 3.5 0 0 0 8.5 6v2h7V6A3.5 3.5 0 0 0 12 2.5"/></symbol>
+</svg>
+
+<herald-trumpeter class="art-wide" theme="soft" reserve="0.4" glyphs="name" fps="24" aria-hidden="true"></herald-trumpeter>
+<herald-trumpeter class="art-narrow" theme="soft" glyphs="name" fps="24" aria-hidden="true"></herald-trumpeter>
+<main class="card" aria-labelledby="title">
+  <div class="brand"><img src="/brand/herald-gs-horizontal.svg" alt="Goldman Sachs | The Herald" width="194" height="40"></div>
+  <div class="head">
+    <h1 id="title">Sign in to Herald</h1>
+    <p class="sub">Use the work account you use for email.</p>
+  </div>
+  <div id="msg" class="msg" role="alert" hidden></div>
+  <ul id="providers" class="providers" aria-label="Ways to sign in" aria-busy="true">
+    <li class="skel" aria-hidden="true"></li>
+  </ul>
+  <div id="or" class="or" hidden>or use an emergency account</div>
+  <form id="pwform" class="pwform" hidden novalidate aria-label="Sign in with an emergency account">
+    <div class="field"><label for="u">Username</label>
+      <div class="box"><input id="u" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="120" required></div></div>
+    <div class="field"><label for="p">Password</label>
+      <div class="box"><input id="p" name="password" type="password" autocomplete="current-password" maxlength="1024" required style="padding-right:60px">
+        <button type="button" class="reveal" id="reveal" aria-controls="p" aria-pressed="false">Show</button></div></div>
+    <div class="field"><label for="c">6-digit code</label>
+      <div class="box"><input id="c" name="code" class="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]*" maxlength="7" required aria-describedby="chelp"></div>
+      <small id="chelp">From the authenticator app set up for this account.</small></div>
+    <button type="submit" class="btn pri" id="pwsubmit">Sign in</button>
+    <p class="pwhint">Emergency accounts are for when single sign-on is down. Every use is recorded and reviewed.</p>
+  </form>
+  <p class="foot"><svg class="ic sm" aria-hidden="true"><use href="#i-lock_closed"/></svg><span>Access is managed by your organisation's directory. Ask your team lead for access.</span></p>
+</main>
+
+<script>
+(function(){
+'use strict';
+/* All text below is set with textContent or attributes, never as HTML, so nothing from the URL or the server can inject markup. */
+var SVGNS='http://www.w3.org/2000/svg';
+var params=new URLSearchParams(location.search);
+
+/* Only same-site relative paths: "/x" yes; "//host", "/\host", control characters and anything that resolves off this origin, no. */
+function safeNext(v){
+  if(typeof v!=='string'||v.charAt(0)!=='/'||v.charAt(1)==='/'||/[\\\u0000-\u001f\u007f]/.test(v))return '/';
+  try{var u=new URL(v,location.origin);if(u.origin!==location.origin)return '/';
+    /* never send people back to the sign-in pages themselves (that would loop) */
+    if(/^\/(login(\.html)?|auth)(\/|$)/.test(u.pathname))return '/';
+    return u.pathname+u.search+u.hash;}catch(e){return '/';}
+}
+var next=safeNext(params.get('next'));
+var error=params.get('error');
+
+var MESSAGES={
+  no_access:{kind:'warning',icon:'warning',title:"You don't have access to Herald yet",
+    text:'You signed in, but your account is not in any Herald group. Ask your team lead to add you, then sign in again.'},
+  login_failed:{kind:'error',icon:'error_circle',title:"Sign-in didn't work",
+    text:'Something went wrong while signing you in. Try again. If it keeps happening, contact your IT service desk.'},
+  expired:{kind:'info',icon:'info',title:'Your session has ended',
+    text:'For your security, Herald signs you out after a while. Sign in again to pick up where you left off.'}
+};
+
+function icon(name,cls){var s=document.createElementNS(SVGNS,'svg');s.setAttribute('class','ic'+(cls?' '+cls:''));s.setAttribute('aria-hidden','true');
+  var u=document.createElementNS(SVGNS,'use');u.setAttribute('href','#i-'+name);s.appendChild(u);return s;}
+function microsoftLogo(){var s=document.createElementNS(SVGNS,'svg');s.setAttribute('viewBox','0 0 21 21');s.setAttribute('width','20');s.setAttribute('height','20');s.setAttribute('aria-hidden','true');
+  [['1','1','#f25022'],['11','1','#7fba00'],['1','11','#00a4ef'],['11','11','#ffb900']].forEach(function(q){
+    var r=document.createElementNS(SVGNS,'rect');r.setAttribute('x',q[0]);r.setAttribute('y',q[1]);r.setAttribute('width','9');r.setAttribute('height','9');r.setAttribute('fill',q[2]);s.appendChild(r);});
+  return s;}
+function el(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=String(text);return n;}
+
+function showMessage(m,action){var box=document.getElementById('msg');box.textContent='';box.className='msg '+m.kind;
+  box.setAttribute('role',m.kind==='info'?'status':'alert');
+  box.appendChild(icon(m.icon));var body=el('div');body.appendChild(el('b',null,m.title));if(m.text)body.appendChild(el('p',null,m.text));
+  if(action){var a=el('div','act');a.appendChild(action);body.appendChild(a);}
+  box.appendChild(body);box.hidden=false;}
+
+/* After a refusal the provider still remembers the refused person; reauth=1 makes it ask for credentials
+   again, so someone else can sign in instead of being sent straight back here. */
+function signInUrl(id){var q={provider:id,next:next};if(params.get('error')==='no_access')q.reauth='1';
+  return '/auth/login?'+new URLSearchParams(q).toString();}
+
+var stepUp=params.get('step_up')==='1';
+
+/* The emergency-account form: username, password, one-time code. Every failure gets the same answer from the server. */
+function showPasswordForm(){var f=document.getElementById('pwform');f.hidden=false;
+  document.getElementById('or').hidden=!document.getElementById('providers').children.length;
+  var p=document.getElementById('p'),reveal=document.getElementById('reveal'),btn=document.getElementById('pwsubmit');
+  reveal.addEventListener('click',function(){var show=p.type==='password';p.type=show?'text':'password';
+    reveal.textContent=show?'Hide':'Show';reveal.setAttribute('aria-pressed',String(show));});
+  f.addEventListener('submit',function(ev){ev.preventDefault();
+    var u=document.getElementById('u'),c=document.getElementById('c');
+    var missing=[u,p,c].filter(function(x){return !x.value.trim();});
+    if(missing.length){showMessage({kind:'error',icon:'error_circle',title:'Fill in all three fields',text:'Username, password and the 6-digit code from the authenticator app.'});missing[0].focus();return;}
+    btn.disabled=true;btn.textContent='Signing in…';
+    fetch('/auth/password',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({username:u.value.trim(),password:p.value,code:c.value.replace(/\s/g,''),next:next})})
+    .then(function(r){return r.json().catch(function(){return null;}).then(function(d){return {status:r.status,data:d};});})
+    .then(function(res){
+      if(res.status===200){location.replace(safeNext(res.data&&res.data.next)||next);return;}
+      p.value='';c.value='';
+      if(res.status===429)showMessage({kind:'error',icon:'error_circle',title:'Too many attempts',text:'Sign-in is paused for this account. Try again in 15 minutes.'});
+      else if(res.status===401)showMessage({kind:'error',icon:'error_circle',title:'Wrong username, password or code',text:'Check all three and try again. Codes change every 30 seconds and work once.'});
+      else showMessage(MESSAGES.login_failed);
+      (res.status===401?p:u).focus();})
+    .catch(function(){showMessage(MESSAGES.login_failed);})
+    .then(function(){btn.disabled=false;btn.textContent='Sign in';});});}
+
+function renderProviders(list){var ul=document.getElementById('providers');ul.textContent='';ul.setAttribute('aria-busy','false');
+  var password=false;
+  list=list.filter(function(p){if(p&&p.type==='password'){password=true;return false;}return true;});
+  setTimeout(function(){if(password)showPasswordForm();},0);
+  list.forEach(function(p){if(!p||typeof p.id!=='string'||!p.id)return;
+    var li=el('li'),a=el('a','pbtn');a.href=signInUrl(p.id);
+    var pic=el('span','pic');pic.appendChild(p.id==='microsoft'?microsoftLogo():icon('key'));a.appendChild(pic);
+    a.appendChild(el('span',null,p.label||('Continue with '+p.id)));
+    a.addEventListener('click',function(){a.setAttribute('aria-disabled','true');a.lastChild.textContent='Opening sign-in…';});
+    li.appendChild(a);ul.appendChild(li);});
+  ul.hidden=!ul.children.length;}
+
+function retryButton(){var b=el('button','btn','Try again');b.type='button';b.addEventListener('click',function(){location.reload();});return b;}
+
+if(error)showMessage(MESSAGES[error]||MESSAGES.login_failed);
+else if(stepUp)showMessage({kind:'info',icon:'info',title:"Confirm it's you",text:'Approving a risky action needs a fresh sign-in. Enter your password and code again.'});
+
+function getJson(url){return fetch(url,{credentials:'same-origin',headers:{'Accept':'application/json'}}).then(function(r){
+  return r.json().catch(function(){return null;}).then(function(d){return {ok:r.ok,status:r.status,data:d};});});}
+
+Promise.all([getJson('/api/me').catch(function(){return null;}),getJson('/auth/providers').catch(function(){return null;})]).then(function(res){
+  var me=res[0],prov=res[1];
+  /* Already signed in, or this Herald runs without sign-in: go straight on (unless there is an error to read). */
+  if(me&&me.ok&&me.data&&me.data.mode==='oidc'&&!error&&!stepUp){location.replace(next);return;}
+  if(me&&me.ok&&me.data&&me.data.mode==='demo'){
+    var open=el('a','btn pri','Open Herald');open.href=next;
+    showMessage({kind:'info',icon:'info',title:'No sign-in needed',text:'This Herald runs in demo mode, so you pick who you are inside the app.'},open);
+    renderProviders([]);return;}
+  /* With no buttons to press, the reason there are none matters more than any ?error= message. */
+  if(!prov||!prov.ok||!Array.isArray(prov.data)){
+    renderProviders([]);
+    showMessage({kind:'error',icon:'error_circle',title:'Sign-in options did not load',text:'Herald did not answer. Check your connection and try again.'},retryButton());
+    return;}
+  renderProviders(prov.data);
+  if(!document.getElementById('providers').children.length&&!prov.data.some(function(p){return p&&p.type==='password';}))
+    showMessage({kind:'warning',icon:'warning',title:'Sign-in is not configured',text:'No way to sign in has been set up for this Herald yet. Tell your team lead or the Herald administrators.'});
+});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+# Template following the response stages in docs/INCIDENT-PLAYBOOK.md. Copy into config/runbooks/ and
+# replace the {{placeholders}} with fields from your events. `template`, `repeat_every` and `due_within`
+# are stored with the step and shown; the service does not act on them yet.
+name: critical-service-outage
+applies_to: severity >= critical
+steps:
+  # Detect / open communications
+  - text: "Confirm the alert is real: check health of {{service}}"
+    kind: check
+    action: http_get
+    params: { url: "{{health_url}}", expect_status: 200 }
+    approval: none
+  - text: "Take ownership: acknowledge, you are now incident manager for {{key}}"
+    kind: manual
+    approval: none
+  # Assess
+  - text: "Assess impact. Who is affected, what do they see, how many, since when ({{first_seen}}), any support cases, any data or security concern?"
+    kind: manual
+    approval: none
+  - text: "Confirm severity {{severity}} or change it; note the reason"
+    kind: manual
+    approval: none
+  # Initial communications
+  - text: "Post initial update from the template: '{{key}} - {{severity}} - {{title}}'. Say what is known and that the next update is at {{next_update_at}}"
+    kind: manual
+    template: status_update
+    due_within: 10
+    approval: none
+  # Escalate / delegate
+  - text: "Page the team lead if not acknowledged by a second responder"
+    kind: action
+    action: escalate
+    params: { target: "{{team_lead}}", reason: "{{key}} critical, {{service}}" }
+    condition: "alert.acked_by_count < 2"
+    approval: none
+  - text: "Name a tech lead and a communications owner for this incident"
+    kind: manual
+    approval: none
+  # Iterate
+  - text: "Check what changed recently on {{service}} (deploys, config, upstream); write down observations"
+    kind: check
+    approval: none
+  - text: "Restart {{service}} if the theory is a stuck process"
+    kind: action
+    action: restart_service
+    params: { service: "{{service}}", env: "{{env}}" }
+    approval: role:team-lead
+  - text: "Verify recovery"
+    kind: check
+    action: http_get
+    params: { url: "{{health_url}}", expect_status: 200 }
+    approval: none
+  # Follow-up communications
+  - text: "Post a follow-up update: impact, current status (2-4 bullets), next steps (2-4 bullets), next update time. Write 'unknown' where unknown"
+    kind: manual
+    template: status_update
+    repeat_every: 30
+    approval: none
+  # Resolve
+  - text: "Wait for the resolved event or confirm recovery with a second person"
+    kind: wait
+    action: wait
+    params: { until: "alert.status == resolved", timeout_min: 240 }
+    approval: none
+  - text: "Post final update: service restored, summary of impact, postmortem to follow"
+    kind: manual
+    template: status_update
+    approval: none
+  - text: "Open postmortem draft and name an owner"
+    kind: action
+    action: open_ticket
+    params: { title: "Postmortem {{key}}: {{title}}", owner: "{{team}}", priority: high }
+    approval: none

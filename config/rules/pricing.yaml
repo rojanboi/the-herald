@@ -1,0 +1,21 @@
+# Team Pricing (from the brief): log lines from pricing-engine-* at WARN or above -> UI only;
+# group them into one alert per instrument every 5 minutes.
+id: pricing-engine-warnings
+owner: team:pricing
+name: Pricing engine warnings
+when:
+  all:
+    - {field: "@service", op: glob, value: "pricing-engine-*"}
+    - {field: "@severity", op: severity_gte, value: WARN}
+present:
+  title: "{{instrument}}: {{message}}"
+  body: "Reported by {{@service}}"
+  fields: [instrument, latency_ms, logger]
+  colour: amber
+group:
+  by: [instrument]
+  window: 5m
+notify:
+  - to: team:pricing
+    channels: [ui]
+runbook: pricing-latency

@@ -1,0 +1,30 @@
+# Team Settlements (from the brief): any WORKFLOW_FAILED where workflowName = order-settlement
+# and environment = prod -> phone the on-call person + SMS; show the step and the error
+# message in red in the UI.
+id: settlements-order-settlement-failed
+owner: team:settlements
+name: Order settlement failed in prod
+when:
+  all:
+    - {field: type, op: eq, value: WORKFLOW_FAILED}
+    - {field: workflowName, op: eq, value: order-settlement}
+    - {field: environment, op: eq, value: prod}
+severity: critical
+present:
+  title: "Settlement failed at {{step}}"
+  body: "{{error.code}}: {{error.message}}"
+  fields: [workflowId, step, error.code, error.message, environment]
+  highlight: [step, error.message]
+  colour: red
+group:
+  by: [workflowId]
+notify:
+  - to: team:settlements/on-call
+    channels: [phone, sms]
+  - to: team:settlements
+    channels: [ui]
+runbook: settlement-timeout
+resolve_when:
+  all:
+    - {field: type, op: eq, value: WORKFLOW_SUCCEEDED}
+    - {field: workflowName, op: eq, value: order-settlement}

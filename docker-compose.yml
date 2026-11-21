@@ -1,0 +1,174 @@
+# One command: docker compose up --build
+#   UI and API   http://localhost:8080        (API docs at /docs; change with HERALD_PORT)
+#   Email inbox  http://localhost:8025        (Mailpit)
+#   SMS / phone  http://localhost:8090        (fake gateway: see texts, reply, simulate an outage)
+#   Broker       localhost:19092              (Kafka API)
+# Scale the event path:  docker compose up --build --scale worker=4
+#
+# Real sign-in (single sign-on through a local Keycloak instead of the "Viewing as" switcher):
+#   AUTH_MODE=oidc HERALD_SECRET=$(openssl rand -hex 32) docker compose --profile sso up --build
+#   Sign-in page http://localhost:8080/login, Keycloak admin http://localhost:8180  (see docs/SSO.md)
+#   The API refuses to start in this mode with the default HERALD_SECRET.
+#
+# Network: every port below is published on 127.0.0.1 only, so other computers cannot connect at all.
+# Postgres has no published port and sits on an internal network that only the API and workers join.
+name: herald
+
+x-app: &app
+  build: .
+  image: herald-app
+  environment: &env
+    DATABASE_URL: postgresql://herald:herald@postgres:5432/herald
+    KAFKA_BOOTSTRAP: redpanda:9092
+    SMTP_HOST: mailpit
+    SMTP_PORT: "1025"
+    GATEWAY_URL: http://gateway
+    MAILPIT_URL: http://mailpit:8025
+    MOCK_SYSTEMS_URL: http://gateway
+    API_URL: http://api:8000
+    PUBLIC_URL: http://localhost:${HERALD_PORT:-8080}
+    ACTION_ALLOWED_HOSTS: counterparty-service
+    HERALD_SECRET: ${HERALD_SECRET:-dev-only-change-me}
+    HERALD_TOKEN_METRICS_WEBHOOK: ${HERALD_TOKEN_METRICS_WEBHOOK:-demo-metrics-token}
+    HERALD_TOKEN_GENERIC_WEBHOOK: ${HERALD_TOKEN_GENERIC_WEBHOOK:-}
+    AUTH_MODE: ${AUTH_MODE:-demo}
+    # Single sign-on (AUTH_MODE=oidc). Defaults point at the demo Keycloak; the secret is a throwaway demo value.
+    OIDC_ISSUER: ${OIDC_ISSUER:-http://localhost:8180/realms/herald}
+    OIDC_DISCOVERY_URL: ${OIDC_DISCOVERY_URL:-http://keycloak:8080/realms/herald/.well-known/openid-configuration}
+    OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-herald}
+    OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-MZ_ny8IQoisMuewV-Rzufv2gGIbxBTUaxdneeupxvIQ}
+    ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
+    ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}
+    ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:-}
+    STEP_UP_MAX_AGE: ${STEP_UP_MAX_AGE:-300}
+    DEMO_TOOLS: ${DEMO_TOOLS:-on}   # this compose file is the demo stack; keep the sample-event buttons under SSO too
+    # Networks people may open Herald from. Default: loopback and private ranges, standing in for the corporate network.
+    ALLOWED_NETWORKS: ${ALLOWED_NETWORKS:-127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+    TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+    # Emergency accounts (config/local-accounts.yaml) under SSO. Demo values; see .env.example.
+    LOCAL_LOGIN: ${LOCAL_LOGIN:-on}
+    HERALD_BREAKGLASS_PASSWORD_HASH: ${HERALD_BREAKGLASS_PASSWORD_HASH:-scrypt:16384:8:5:IeQx3P9BX7MuM4ho7h35_A:-N0tgX5yN3xOX-H8FaYhhq7y5oMEx5Cu6heRk-AP57A}
+    HERALD_BREAKGLASS_TOTP_SECRET: ${HERALD_BREAKGLASS_TOTP_SECRET:-VPURLDJKW2HZL6ZABMVHRAUNDMJO47ZM}
+    LLM_PROVIDER: ${LLM_PROVIDER:-none}
+    MAX_ATTEMPTS: ${MAX_ATTEMPTS:-5}
+    RETRY_BASE_SECONDS: ${RETRY_BASE_SECONDS:-2}
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: herald
+      POSTGRES_PASSWORD: herald
+      POSTGRES_DB: herald
+    volumes:
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks: [core]   # no published port: reachable only from the API and workers
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U herald -d herald"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=1G
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+    ports: ["127.0.0.1:19092:19092"]
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+
+  topics:
+    image: redpandadata/redpanda:v24.2.7
+    depends_on:
+      redpanda: {condition: service_healthy}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        for topic in events.raw workflow.events trade.events; do
+          rpk topic create "$$topic" --partitions 8 -X brokers=redpanda:9092 || true
+        done
+
+  # Demo identity provider, only with --profile sso. Browsers reach it at localhost:8180; the API reaches it
+  # as keycloak:8080. KC_HOSTNAME keeps one issuer for both, so tokens check out on either path.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0.7
+    profiles: [sso]
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_HOSTNAME: http://localhost:8180
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin-herald-demo}
+    volumes:
+      - ./config/keycloak:/opt/keycloak/data/import:ro
+    ports: ["127.0.0.1:8180:8080"]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["127.0.0.1:8025:8025", "127.0.0.1:1025:1025"]
+
+  gateway:
+    <<: *app
+    command: ["uvicorn", "alertsvc.gateway.main:app", "--host", "0.0.0.0", "--port", "80", "--log-level", "warning"]
+    user: root   # binds port 80 so runbooks can use http://counterparty-service/health as written in the brief
+    ports: ["127.0.0.1:8090:80"]
+    networks:
+      default:
+        aliases: [counterparty-service]
+
+  api:
+    <<: *app
+    command: ["uvicorn", "alertsvc.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "warning"]
+    ports: ["127.0.0.1:${HERALD_PORT:-8080}:8000"]
+    networks: [default, core]
+    volumes:
+      - ./config:/app/config:ro      # edit a rule file and it is live within a second
+      - ./ui:/app/ui:ro               # the web UI is plain files: edit and reload the page
+      - ./samples:/app/samples:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+      topics: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "alertsvc.worker.main"]
+    networks: [default, core]
+    depends_on:
+      api: {condition: service_healthy}
+
+  sources:
+    <<: *app
+    command: ["python", "-m", "alertsvc.sources"]
+    volumes:
+      - ./config:/app/config:ro
+      - ./demo-logs:/var/log/herald
+    depends_on:
+      topics: {condition: service_completed_successfully}
+
+networks:
+  default: {}
+  core:
+    internal: true   # no route out and no published ports: the database lives here
+

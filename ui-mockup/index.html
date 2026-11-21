@@ -1,0 +1,1080 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Herald Alert Console</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: sticky top bar (team, role, simulate), left rail of screens on desktop that becomes a tab strip on phones,
+   one working column, alert and event detail in a right-hand drawer. */
+:root{
+  --bg:#eef2f5; --surface:#ffffff; --sunk:#e4eaef; --ink:#13212c; --muted:#566878; --line:#d3dbe2;
+  --accent:#0b6b7d; --accent-ink:#ffffff; --accent-soft:#dbeef1;
+  --crit:#b8202f; --crit-soft:#fbe4e6; --err:#b5480b; --err-soft:#fbe6d6; --warn:#855a00; --warn-soft:#fbeecb;
+  --info:#2457b8; --info-soft:#e0eafb; --ok:#19713f; --ok-soft:#dcf1e4; --grey:#566878; --grey-soft:#e4eaef;
+  --scrim:rgba(19,33,44,.45); --shadow:0 8px 30px rgba(19,33,44,.16);
+  --font-display:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0e1419; --surface:#161f27; --sunk:#1d2832; --ink:#e4ebf1; --muted:#93a5b5; --line:#2b3945;
+  --accent:#58c4d6; --accent-ink:#06242b; --accent-soft:#12363f;
+  --crit:#ff8a93; --crit-soft:#47161c; --err:#ffab73; --err-soft:#45230f; --warn:#f2c14e; --warn-soft:#3d2f0a;
+  --info:#8db4ff; --info-soft:#152a4f; --ok:#6fd39a; --ok-soft:#10361f; --grey:#93a5b5; --grey-soft:#1d2832;
+  --scrim:rgba(0,0,0,.6); --shadow:0 8px 30px rgba(0,0,0,.5); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0e1419; --surface:#161f27; --sunk:#1d2832; --ink:#e4ebf1; --muted:#93a5b5; --line:#2b3945;
+  --accent:#58c4d6; --accent-ink:#06242b; --accent-soft:#12363f;
+  --crit:#ff8a93; --crit-soft:#47161c; --err:#ffab73; --err-soft:#45230f; --warn:#f2c14e; --warn-soft:#3d2f0a;
+  --info:#8db4ff; --info-soft:#152a4f; --ok:#6fd39a; --ok-soft:#10361f; --grey:#93a5b5; --grey-soft:#1d2832;
+  --scrim:rgba(0,0,0,.6); --shadow:0 8px 30px rgba(0,0,0,.5); color-scheme:dark }
+
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--font-body)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+table{font:inherit;color:inherit;border-collapse:collapse;width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,p,ul,ol,dl,dd,pre,fieldset{margin:0;padding:0}
+ul,ol{list-style:none}
+fieldset{border:0;min-width:0}
+h1{font:700 26px/1.1 var(--font-display);letter-spacing:.005em;text-wrap:balance}
+h2{font:600 17px/1.2 var(--font-display);letter-spacing:.01em;text-wrap:balance}
+h3{font:600 14.5px/1.3 var(--font-body);overflow-wrap:anywhere}
+code,pre,.mono{font-family:var(--font-mono);font-size:12.5px}
+code{background:var(--sunk);padding:1px 4px;border-radius:3px;overflow-wrap:anywhere}
+pre{background:var(--sunk);border-radius:6px;padding:10px 12px;overflow-x:auto;line-height:1.5;white-space:pre}
+pre.wrap{white-space:pre-wrap;overflow-wrap:anywhere}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.muted{color:var(--muted)}
+.lab{font:600 11px/1.3 var(--font-body);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.num{font-variant-numeric:tabular-nums}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-block:10px;max-width:1280px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
+.mark{width:18px;height:18px;background:var(--accent);transform:rotate(45deg);border-radius:3px;flex:none}
+.brand b{font:700 21px/1 var(--font-display);letter-spacing:.03em}
+.proto{font:500 10.5px/1.2 var(--font-mono);color:var(--muted);border:1px dashed var(--muted);padding:3px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em}
+.sels{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sels label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.sim{position:relative}
+#simMenu{position:absolute;right:0;top:calc(100% + 6px);width:min(350px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:6px;z-index:12;max-height:72vh;overflow:auto}
+.mh{padding:8px 10px 4px}
+.mi{display:flex;flex-direction:column;gap:1px;width:100%;text-align:left;padding:7px 10px;border:0;background:none;border-radius:6px;cursor:pointer}
+.mi:hover{background:var(--sunk)}
+.mi small{color:var(--muted);font-size:12px}
+.mi.tog{flex-direction:row;align-items:center;gap:10px}
+.mi.tog>span:last-child{display:flex;flex-direction:column}
+.sw{width:34px;height:20px;border-radius:10px;background:var(--line);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--surface)}
+.mi[aria-checked="true"] .sw{background:var(--accent)}
+.mi[aria-checked="true"] .sw::after{left:16px}
+@media (max-width:760px){ .sels{order:3;width:100%} }
+
+/* shell */
+.shell{display:grid;grid-template-columns:186px minmax(0,1fr);gap:26px;padding-block:20px 96px;max-width:1280px;margin:0 auto}
+#nav{position:sticky;top:calc(env(safe-area-inset-top,0px) + 74px);align-self:start;display:flex;flex-direction:column;gap:2px}
+.navb{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border:0;background:none;border-radius:6px;text-align:left;cursor:pointer;color:var(--muted);font-weight:500;white-space:nowrap}
+.navb:hover{color:var(--ink)}
+.navb[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nb{font:600 11px var(--font-mono);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:1px 6px;color:var(--ink)}
+#main{min-width:0;display:flex;flex-direction:column;gap:16px}
+@media (max-width:860px){
+  .shell{grid-template-columns:minmax(0,1fr);gap:12px;padding-block:10px 96px}
+  #nav{position:static;flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px}
+}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:6px 12px;border:1px solid var(--line);background:var(--surface);border-radius:6px;cursor:pointer;font-weight:500;line-height:1.3;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.sm{padding:3px 9px;font-size:12.5px}
+.btn.warn{color:var(--crit);border-color:var(--crit)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.link{border:0;background:none;padding:0;color:var(--accent);text-decoration:underline;font-weight:500}
+.in{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--surface);min-width:0;max-width:100%;width:100%}
+select.in{width:auto}
+textarea.in{resize:vertical;min-height:64px;line-height:1.4}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.segb{border:0;background:none;padding:5px 10px;cursor:pointer;font-size:13px;color:var(--muted)}
+.segb[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.row.top-al{align-items:flex-start}
+.grow{flex:1 1 220px;min-width:0}
+.stack{display:flex;flex-direction:column;gap:10px;min-width:0}
+.note{font-size:12.5px;color:var(--muted)}
+.banner{border:1px solid var(--warn);background:var(--warn-soft);color:var(--ink);border-radius:6px;padding:8px 12px;font-size:13px}
+.banner.info{border-color:var(--info);background:var(--info-soft)}
+.banner.ok{border-color:var(--ok);background:var(--ok-soft)}
+.scroll-x{overflow-x:auto}
+th{text-align:left;font:600 11px var(--font-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+
+/* severity, pills, chips */
+.sev{display:inline-flex;gap:5px;align-items:center;font:600 11.5px/1.2 var(--font-body);letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:4px;white-space:nowrap}
+.sev-critical{background:var(--crit-soft);color:var(--crit)} .sev-error{background:var(--err-soft);color:var(--err)}
+.sev-warning{background:var(--warn-soft);color:var(--warn)} .sev-info{background:var(--info-soft);color:var(--info)}
+.sev-debug{background:var(--grey-soft);color:var(--grey)}
+.c-red{--c:var(--crit);--cs:var(--crit-soft)} .c-orange{--c:var(--err);--cs:var(--err-soft)} .c-amber{--c:var(--warn);--cs:var(--warn-soft)}
+.c-blue{--c:var(--info);--cs:var(--info-soft)} .c-green{--c:var(--ok);--cs:var(--ok-soft)} .c-grey{--c:var(--grey);--cs:var(--grey-soft)}
+.tile{width:36px;height:36px;border-radius:7px;display:grid;place-items:center;background:var(--cs);color:var(--c);font-size:16px;flex:none;border:1px solid var(--c)}
+.count{font:600 12.5px/1.2 var(--font-mono);background:var(--ink);color:var(--surface);padding:2px 8px;border-radius:10px;font-variant-numeric:tabular-nums}
+.pill{font-size:12px;font-weight:500;padding:2px 8px;border-radius:10px;border:1px solid var(--line);white-space:nowrap}
+.pill.firing{border-color:var(--crit);color:var(--crit)} .pill.acked{border-color:var(--info);color:var(--info)} .pill.resolved{border-color:var(--ok);color:var(--ok)}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--muted);display:inline-flex;gap:5px;align-items:center}
+.chip.delivered{color:var(--ok);border-color:var(--ok)}
+.chip.retrying,.chip.pending{color:var(--warn);background:var(--warn-soft);border-color:var(--warn)}
+.chip.parked{color:var(--crit);background:var(--crit-soft);border-color:var(--crit)}
+.badge{font:600 11px/1.2 var(--font-body);padding:2px 7px;border-radius:4px;background:var(--sunk);color:var(--muted);white-space:nowrap}
+.badge.ap{background:var(--warn-soft);color:var(--warn)} .badge.ai{background:var(--info-soft);color:var(--info)} .badge.ok{background:var(--ok-soft);color:var(--ok)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ok);font-weight:500}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+@media (prefers-reduced-motion:no-preference){ .dot.pulse{animation:pulse 1.6s ease-in-out infinite} }
+@keyframes pulse{50%{opacity:.25}}
+
+/* feed */
+.alert{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.alert:hover{border-color:var(--muted)}
+.alert.st-resolved{background:var(--sunk)}
+.al-main{display:flex;flex-direction:column;gap:6px;min-width:0}
+.al-actions{display:flex;flex-direction:column;gap:6px}
+@media (max-width:640px){ .alert{grid-template-columns:auto minmax(0,1fr)} .al-actions{grid-column:1/-1;flex-direction:row} }
+.evrow{display:grid;grid-template-columns:70px minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.evrow:last-child{border-bottom:0}
+.empty{border:1px dashed var(--muted);border-radius:8px;padding:28px 18px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+
+/* drawer */
+#scrim{position:fixed;inset:0;background:var(--scrim);z-index:20}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(620px,100%);background:var(--surface);z-index:21;box-shadow:var(--shadow);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+#drawerHead{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+#drawerBody{overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:20px;min-height:0;flex:1}
+.sec{display:flex;flex-direction:column;gap:8px;min-width:0}
+.kv{display:grid;grid-template-columns:minmax(90px,auto) minmax(0,1fr);gap:4px 14px}
+.kv dt{color:var(--muted)} .kv dd{overflow-wrap:anywhere}
+.kv dd.hi{color:var(--crit);font-weight:600}
+.step{display:grid;grid-template-columns:26px minmax(0,1fr);gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.step:last-child{border-bottom:0}
+.sn{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--muted);display:grid;place-items:center;font:600 12px var(--font-mono);color:var(--muted)}
+.sn.done{background:var(--ok);border-color:var(--ok);color:var(--surface)} .sn.failed{background:var(--crit);border-color:var(--crit);color:var(--surface)}
+.sn.running,.sn.awaiting{border-color:var(--warn);color:var(--warn)}
+.sb{display:flex;flex-direction:column;gap:6px;min-width:0}
+.out{font:12.5px/1.45 var(--font-mono);background:var(--sunk);border-radius:5px;padding:6px 8px;overflow-wrap:anywhere}
+.out.bad{color:var(--crit)}
+.why li{display:flex;gap:8px;align-items:baseline;padding:2px 0;flex-wrap:wrap}
+.why ul{padding-left:20px}
+.tick{font-weight:700;width:14px;flex:none}
+.tick.y{color:var(--ok)} .tick.n{color:var(--crit)}
+.tl li{display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px;padding:3px 0}
+
+/* rules */
+.rule{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+.rule-side{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+@media (max-width:640px){ .rule{grid-template-columns:minmax(0,1fr)} }
+.stat{display:flex;flex-direction:column;min-width:64px}
+.stat b{font:600 15px var(--font-mono);font-variant-numeric:tabular-nums}
+.ed-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:1040px){ .ed-grid{grid-template-columns:minmax(0,1fr)} }
+.ed-form,.ed-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.wcard{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px}
+.wkey{font:700 15px/1.2 var(--font-display);color:var(--accent);text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+@media (max-width:520px){ .wcard{grid-template-columns:minmax(0,1fr);gap:6px} }
+.field{display:flex;flex-direction:column;gap:3px;min-width:0}
+.field>span{font-size:12.5px;color:var(--muted)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.grp{border:1px solid var(--line);border-radius:6px;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.grp .grp{background:var(--surface)}
+.cond{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.1fr) auto;gap:6px;align-items:center}
+@media (max-width:560px){ .cond{grid-template-columns:minmax(0,1fr) auto} .cond>.in{grid-column:1} .cond>.x{grid-column:2;grid-row:1} }
+.x{border:1px solid var(--line);background:var(--surface);border-radius:6px;width:30px;height:30px;cursor:pointer;line-height:1}
+.chk{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.ntf{border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.sentence{font:500 15.5px/1.45 var(--font-body);text-wrap:pretty}
+.jf{border:0;background:none;padding:0 2px;margin:0;font:inherit;color:inherit;cursor:pointer;border-radius:3px;text-align:left}
+.jf:hover{background:var(--accent-soft);color:var(--accent)}
+.match li{display:grid;grid-template-columns:16px minmax(0,1fr);gap:6px;padding:3px 0;font-size:13px}
+.prev{border:1px solid var(--line);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.smsb{background:var(--sunk);border-radius:12px;padding:8px 10px;font-size:13px;overflow-wrap:anywhere;max-width:300px}
+.var{background:var(--accent-soft);color:var(--accent);border-radius:3px;padding:0 3px;font-family:var(--font-mono);font-size:12.5px}
+
+/* runbooks */
+.rb-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px}
+@media (max-width:900px){ .rb-grid{grid-template-columns:minmax(0,1fr)} }
+.rstep{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.rstep:last-child{border-bottom:0}
+
+/* deliveries */
+.dl-grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){ .dl-grid{grid-template-columns:minmax(0,1fr)} }
+.phone{border:2px solid var(--ink);border-radius:24px;padding:12px;background:var(--sunk);display:flex;flex-direction:column;gap:10px;max-width:360px;width:100%}
+.thread{height:300px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px}
+.bub{max-width:88%;padding:7px 10px;border-radius:12px;font-size:13px;overflow-wrap:anywhere}
+.bub.in{background:var(--surface);align-self:flex-start;border:1px solid var(--line)}
+.bub.out{background:var(--accent);color:var(--accent-ink);align-self:flex-end}
+.bub small{display:block;opacity:.75;font-size:11px;margin-top:2px}
+.call{background:var(--surface);border:1px solid var(--ok);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.key{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;line-height:1.15}
+.key b{font:600 16px var(--font-mono)} .key small{font-size:10px;color:var(--muted);min-height:11px}
+.key.act{border-color:var(--accent)} .key.act small{color:var(--accent)}
+.mail{display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+.mrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:8px 10px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;cursor:pointer;width:100%}
+.mrow[aria-pressed="true"]{background:var(--accent-soft)}
+.mbody{padding:12px;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line)}
+.ptabs{display:flex;gap:4px;flex-wrap:wrap}
+.ptab{border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px;color:var(--muted)}
+.ptab[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+
+/* preferences, connect */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.ob{display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px}
+.obn{width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font:600 13px var(--font-mono)}
+.obn.done{background:var(--ok);color:var(--surface)}
+.clockbox{font:600 22px/1 var(--font-mono);font-variant-numeric:tabular-nums}
+.wait{display:inline-flex;align-items:center;gap:8px;font-weight:500;color:var(--warn)}
+.wait .dot{background:var(--warn)}
+.wait.got{color:var(--ok)} .wait.got .dot{background:var(--ok)}
+
+/* toasts */
+#toasts{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.toast{pointer-events:auto;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:8px;display:flex;gap:12px;align-items:center;max-width:600px;box-shadow:var(--shadow);font-size:13.5px}
+.toast button{border:1px solid currentColor;background:none;color:inherit;border-radius:5px;padding:3px 9px;cursor:pointer;white-space:nowrap;font-weight:600}
+</style>
+
+<header class="top">
+  <div class="top-in gut">
+    <div class="brand"><span class="mark" aria-hidden="true"></span><b>Herald</b><span class="proto">Prototype · simulated data</span></div>
+    <div class="sels">
+      <label for="teamSel">Team
+        <select class="in" id="teamSel" data-onc="team">
+          <option value="settlements">Settlements</option><option value="pricing">Pricing</option>
+          <option value="rates">Rates</option><option value="anna">Anna (personal)</option>
+        </select>
+      </label>
+      <label for="roleSel">Signed in as
+        <select class="in" id="roleSel" data-onc="role">
+          <option value="responder">Responder</option><option value="lead">Team lead</option><option value="editor">Rule editor</option>
+        </select>
+      </label>
+    </div>
+    <div class="sim" id="simWrap">
+      <button class="btn pri" id="simBtn" data-act="simToggle" aria-haspopup="true" aria-expanded="false">Simulate ▾</button>
+      <div id="simMenu" hidden></div>
+    </div>
+  </div>
+</header>
+<div class="shell gut">
+  <nav id="nav" aria-label="Screens"></nav>
+  <main id="main"></main>
+</div>
+<div id="scrim" data-act="closeDrawer" hidden></div>
+<aside id="drawer" aria-label="Details" hidden><div id="drawerHead"></div><div id="drawerBody"></div></aside>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+/* ============ helpers ============ */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const nf=n=>Number(n).toLocaleString('en-US');
+const pad=n=>String(n).padStart(2,'0');
+const clock=t=>{const d=new Date(t);return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());};
+const mmss=ms=>{const s=Math.max(0,Math.floor(ms/1000));return pad(Math.floor(s/60))+':'+pad(s%60);};
+const cap=s=>String(s).charAt(0).toUpperCase()+String(s).slice(1);
+const opt=(v,l,cur)=>`<option value="${esc(v)}"${String(v)===String(cur)?' selected':''}>${esc(l)}</option>`;
+const joinAnd=(a,w)=>a.length<2?a.join(''):a.slice(0,-1).join(', ')+' '+(w||'and')+' '+a[a.length-1];
+const list=s=>String(s||'').split(',').map(x=>x.trim()).filter(Boolean);
+
+/* ============ reference data ============ */
+const SEVS={critical:{label:'Critical',short:'CRIT',g:'▲',col:'red'},error:{label:'Error',short:'ERR',g:'◆',col:'orange'},warning:{label:'Warning',short:'WARN',g:'●',col:'amber'},info:{label:'Info',short:'INFO',g:'○',col:'blue'},debug:{label:'Debug',short:'DBG',g:'·',col:'grey'}};
+const SEVMAP={debug:0,trace:0,info:1,information:1,notice:1,warn:2,warning:2,err:3,error:3,crit:4,critical:4,fatal:4};
+const SEVN=['debug','info','warning','error','critical'];
+const sevRank=s=>{if(s==null)return -1;const r=SEVMAP[String(s).toLowerCase()];return r==null?-1:r;};
+const sevName=s=>{const r=sevRank(s);return r<0?null:SEVN[r];};
+const CH={phone:'Phone',sms:'SMS',email:'Email',ui:'In Herald'};
+const CHS=['phone','sms','email','ui'];
+const ALIAS={type:['type','alertname','meta.schema','event_type'],severity:['severity','labels.severity','level'],timestamp:['timestamp','startsAt','meta.ts','time','ts'],service:['service','labels.service','meta.producer','workflowName','logger','host']};
+const OPL={eq:'is',ne:'is not',gt:'is over',gte:'is at least',lt:'is under',lte:'is at most',in:'is one of',contains:'contains',glob:'matches (* = anything)',regex:'matches pattern',exists:'has a value',severity_gte:'is this severe or worse'};
+const TEAMS={
+  settlements:{name:'Settlements',owner:'team:settlements',oncall:'Priya Nair',lead:'Marcus Lindqvist',tz:'Europe/London',hours:['08:00','18:00'],members:[['Priya Nair','Responder, on call'],['Marcus Lindqvist','Team lead, approver'],['Tomasz Zielinski','Responder'],['Elena Fischer','Rule editor']],rota:[['Now until 18:00','Priya Nair'],['18:00 to 08:00','Tomasz Zielinski'],['Tomorrow 08:00','Marcus Lindqvist']],prefs:{critical:['phone','sms','ui'],error:['sms','ui'],warning:['email','ui'],info:['ui']}},
+  pricing:{name:'Pricing',owner:'team:pricing',oncall:'Jonas Weber',lead:'Hana Sato',tz:'Europe/Frankfurt',hours:['07:00','19:00'],members:[['Jonas Weber','Responder, on call'],['Hana Sato','Team lead, approver'],['Elena Fischer','Rule editor']],rota:[['Now until 19:00','Jonas Weber'],['19:00 to 07:00','Hana Sato']],prefs:{critical:['phone','sms','ui'],error:['email','ui'],warning:['ui'],info:['ui']}},
+  rates:{name:'Rates',owner:'team:rates',oncall:'Sofia Marchetti',lead:'David Okafor',tz:'Europe/London',hours:['07:00','17:30'],members:[['Sofia Marchetti','Responder, on call'],['David Okafor','Team lead, approver'],['Elena Fischer','Rule editor']],rota:[['Now until 17:30','Sofia Marchetti'],['After hours','David Okafor']],prefs:{critical:['phone','sms','ui'],error:['email','ui'],warning:['email','ui'],info:['ui']}},
+  anna:{name:'Anna (personal)',owner:'person:anna',oncall:'Anna',lead:'Leila Haddad',tz:'Europe/London',hours:['08:00','20:00'],personal:true,members:[['Anna','Receives her own alerts'],['Leila Haddad','Payments team lead, approver']],rota:[['Personal rules','Anna']],prefs:{critical:['sms','ui'],error:['email','ui'],warning:['email'],info:['ui']}}
+};
+const teamKey=owner=>Object.keys(TEAMS).find(k=>TEAMS[k].owner===owner)||'settlements';
+const SAMPLES={
+  workflow:{label:'Workflow failed',source:'kafka:workflow-events',raw:{type:'WORKFLOW_FAILED',workflowId:'WF-20261023-00042',workflowName:'order-settlement',step:'validate-counterparty',severity:'ERROR',environment:'prod',timestamp:'2026-10-23T09:14:02.331Z',error:{code:'TIMEOUT',message:'Counterparty service did not respond in 5000 ms'}}},
+  metric:{label:'High error rate',source:'webhook:alertmanager',raw:{alertname:'HighErrorRate',labels:{service:'payments-api',region:'eu-west',severity:'critical'},annotations:{summary:'Error rate 12% over the last 5 minutes'},startsAt:'2026-10-23T09:13:00Z',status:'firing'}},
+  trade:{label:'Trade rejected',source:'kafka:trade-events',raw:{meta:{schema:'trade.rejected.v2',producer:'trade-gateway',ts:1792833245000},payload:{tradeId:'T-998877',desk:'rates',notional:25000000,currency:'EUR',reason:'LIMIT_BREACH'}}},
+  pricing:{label:'Pricing warning',source:'logfile:pricing-engine',raw:{timestamp:'2026-10-23T09:15:40.118Z',level:'WARN',logger:'pricing-engine-3',instrument:'EURUSD',latency_ms:1840,message:'Quote latency above threshold'}},
+  unseen:{label:'Batch job failed (new schema)',source:'webhook:scheduler',raw:{specversion:'1.0',id:'b7d1c2e0-41aa-4f0e-9c1d-2f6a8e7733b1',source:'/scheduler/eod',type:'com.example.batch.job.failed',time:'2026-10-23T22:05:11Z',subject:'eod-position-reconciliation',data:{jobId:'JOB-77120',attempt:3,exitCode:137,env:'prod',owner:'settlements',durationSec:5412,lastLog:'Killed: out of memory'}}}
+};
+const SEED_RULES=[
+  {id:'r-settle',owner:'team:settlements',name:'Order settlement failures in prod',enabled:true,version:3,
+   when:{all:[{field:'type',op:'eq',value:'WORKFLOW_FAILED'},{field:'workflowName',op:'eq',value:'order-settlement'},{field:'environment',op:'eq',value:'prod'}]},
+   severity:'critical',present:{title:'Settlement workflow {{workflowId}} failed at {{step}}',body:'{{error.message}}',fields:['workflowId','step','error.code','error.message','environment'],highlight:['step','error.message'],colour:'red'},
+   group:{by:['workflowId'],window:'5m'},notify:[{to:'oncall:settlements',channels:['phone','sms']},{to:'team:settlements',channels:['ui']}],runbook:'settlement-timeout'},
+  {id:'r-pricing',owner:'team:pricing',name:'Pricing engine warnings',enabled:true,version:2,
+   when:{all:[{field:'@service',op:'glob',value:'pricing-engine-*'},{field:'@severity',op:'severity_gte',value:'WARN'}]},
+   severity:'event',present:{title:'{{instrument}}: {{message}}',body:'{{logger}} reported latency of {{latency_ms | number}} ms',fields:['instrument','logger','latency_ms','level'],highlight:['latency_ms'],colour:'amber'},
+   group:{by:['instrument'],window:'5m'},notify:[{to:'team:pricing',channels:['ui']}],runbook:'pricing-latency'},
+  {id:'r-rates',owner:'team:rates',name:'Large rejected rates trades',enabled:true,version:1,
+   when:{all:[{field:'meta.schema',op:'glob',value:'trade.rejected.*'},{field:'payload.desk',op:'eq',value:'rates'},{field:'payload.notional',op:'gt',value:10000000}]},
+   severity:'warning',present:{title:'Rejected {{payload.currency}} {{payload.notional}} — {{payload.reason}}',body:'Trade {{payload.tradeId}} on the {{payload.desk}} desk was rejected by {{meta.producer}}. Notional {{payload.notional | number}} {{payload.currency}}.',fields:['payload.tradeId','payload.desk','payload.notional','payload.currency','payload.reason'],highlight:['payload.reason'],colour:'amber'},
+   group:{by:['payload.tradeId'],window:'1m'},notify:[{to:'team:rates',channels:['email','ui']}],runbook:null},
+  {id:'r-anna',owner:'person:anna',name:'Anything critical from payments-api',enabled:true,version:1,
+   when:{all:[{field:'@severity',op:'severity_gte',value:'critical'},{field:'@service',op:'eq',value:'payments-api'}]},
+   resolve_when:{field:'status',op:'eq',value:'resolved'},
+   severity:'critical',present:{title:'{{alertname}} on {{labels.service}} ({{labels.region}})',body:'{{annotations.summary}}',fields:['alertname','labels.service','labels.region','annotations.summary','status'],highlight:['annotations.summary'],colour:'red'},
+   group:{by:['alertname','labels.service'],window:'5m'},notify:[{to:'person:anna',channels:['sms'],hours:{from:'08:00',to:'20:00',tz:'Europe/London'},else:['email']},{to:'person:anna',channels:['ui']}],runbook:'payments-high-error-rate'}
+];
+const RUNBOOKS={
+  'settlement-timeout':{id:'settlement-timeout',title:'Settlement timeout',format:'Structured steps (YAML)',parsedBy:'parser',reviewedBy:'Marcus Lindqvist',
+    source:'runbook: settlement-timeout\nmatches:\n  type: WORKFLOW_FAILED\n  "error.code": TIMEOUT\nsteps:\n  - check: "Is counterparty-service healthy?"\n    action: http_get\n    url: "http://counterparty-service/health"\n  - action: retry_workflow\n    workflowId: "{{workflowId}}"\n    approval: none\n  - if: "retry fails twice"\n    action: escalate\n    team: counterparty-support\n    approval: required',
+    steps:[
+      {text:'Is counterparty-service healthy?',kind:'check',action:'http_get',params:{url:'http://counterparty-service/health'},condition:null,approval:'none'},
+      {text:'Retry workflow {{workflowId}}',kind:'action',action:'retry_workflow',params:{workflowId:'{{workflowId}}'},condition:null,approval:'none'},
+      {text:'Escalate to counterparty-support',kind:'action',action:'escalate',params:{team:'counterparty-support'},condition:'retry fails twice',approval:'required',requires:{step:1,failed:2}}]},
+  'payments-high-error-rate':{id:'payments-high-error-rate',title:'HighErrorRate on payments-api',format:'Markdown page',parsedBy:'parser',reviewedBy:'Leila Haddad',
+    source:'# HighErrorRate on payments-api\n1. Open the payments dashboard and check if errors are in one region only.\n2. If one region: fail traffic over to the other region (needs approval from the team lead).\n3. If all regions: check the last deployment and roll it back.\n4. Post an update in the #payments-incidents channel every 15 minutes.',
+    steps:[
+      {text:'Open the payments dashboard and check if errors are in one region only (alert says {{labels.region}})',kind:'check',action:null,params:{},condition:null,approval:'none'},
+      {text:'Fail traffic for {{labels.service}} over to the other region',kind:'action',action:'failover_traffic',params:{service:'{{labels.service}}',from:'{{labels.region}}'},condition:'errors are in one region',approval:'role:team-lead'},
+      {text:'Check the last deployment of {{labels.service}} and roll it back',kind:'action',action:'rollback_deployment',params:{service:'{{labels.service}}'},condition:'errors are in all regions',approval:'required'},
+      {text:'Post an update in the #payments-incidents channel every 15 minutes',kind:'manual',action:null,params:{repeat:'15m'},condition:null,approval:'none'}]},
+  'pricing-latency':{id:'pricing-latency',title:'Pricing latency over a second',format:'Free text (copied from a chat message)',parsedBy:'ai',reviewedBy:null,
+    source:"When pricing latency goes over a second, it's usually the cache. Restart the pricing-engine instance named in the alert, wait 2 minutes, and if latency is still high, call the pricing on-call person.",
+    steps:[
+      {text:'Restart {{logger}} (the instance named in the alert)',kind:'action',action:'restart_service',params:{instance:'{{logger}}'},condition:null,approval:'none'},
+      {text:'Wait 2 minutes',kind:'wait',action:'wait',params:{duration:'2 minutes'},condition:null,approval:'none'},
+      {text:'Call the pricing on-call person',kind:'action',action:'page_oncall',params:{team:'pricing'},condition:'latency is still high',approval:'none'}]}
+};
+
+/* ============ state ============ */
+const S={team:'settlements',role:'responder',view:'feed',simOpen:false,smsDown:false,night:false,
+  rules:clone(SEED_RULES),runbooks:clone(RUNBOOKS),events:[],eventsTotal:0,alerts:[],notifs:[],approvals:[],audit:[],
+  threads:{},emails:[],calls:[],fields:{},toasts:[],
+  f:{status:'open',sev:'all'},drawer:null,draft:null,draftNew:false,draftAI:false,edSample:null,nlText:'',
+  phone:null,smsDraft:'',emailSel:null,pasteText:'',pasteSteps:null,
+  ob:{src:null,t0:null,gotAt:null,eventId:null,accepted:false,alertAt:null,preMatched:false}};
+let seq=0,codeSeed=3524;
+const T=()=>TEAMS[S.team];
+const actor=()=>S.role==='responder'?T().oncall:S.role==='lead'?T().lead:'Elena Fischer';
+const canEdit=()=>S.role!=='responder';
+const nextCode=()=>{codeSeed=1000+((codeSeed-1000+1297)%9000);return String(codeSeed);};
+const ruleById=id=>S.rules.find(r=>r.id===id);
+const alertById=id=>S.alerts.find(a=>a.id===id);
+
+/* ============ engine: normalise, match, dedup ============ */
+function flatten(o,pre,out){out=out||{};for(const k in o){const v=o[k],p=pre?pre+'.'+k:k;if(v&&typeof v==='object'&&!Array.isArray(v))flatten(v,p,out);else out[p]=v;}return out;}
+function normalise(raw,source){const flat=flatten(raw);const attrs={source:source},paths={};
+  for(const a in ALIAS){for(const p of ALIAS[a]){if(flat[p]!==undefined&&flat[p]!==null){attrs[a]=flat[p];paths[a]=p;break;}}}
+  return {flat,attrs,paths};}
+function getField(ev,f){f=String(f||'').trim();if(f.charAt(0)==='@')return ev.attrs[f.slice(1)];return ev.flat[f];}
+const num=v=>(v===undefined||v===null||v==='')?NaN:Number(v);
+const globRe=g=>new RegExp('^'+String(g).replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.')+'$');
+const OPS={
+  eq:(a,v)=>a!==undefined&&String(a)===String(v),
+  ne:(a,v)=>String(a)!==String(v),
+  gt:(a,v)=>num(a)>num(v), gte:(a,v)=>num(a)>=num(v), lt:(a,v)=>num(a)<num(v), lte:(a,v)=>num(a)<=num(v),
+  in:(a,v)=>a!==undefined&&(Array.isArray(v)?v:list(v)).map(String).includes(String(a)),
+  contains:(a,v)=>Array.isArray(a)?a.map(String).includes(String(v)):a!==undefined&&String(a).toLowerCase().includes(String(v).toLowerCase()),
+  glob:(a,v)=>a!==undefined&&globRe(v).test(String(a)),
+  regex:(a,v)=>{try{return a!==undefined&&new RegExp(v).test(String(a));}catch(e){return false;}},
+  exists:a=>a!==undefined&&a!==null,
+  severity_gte:(a,v)=>sevRank(a)>=0&&sevRank(a)>=sevRank(v)
+};
+const isGroup=n=>!!(n&&(n.all||n.any||n.not));
+function evalNode(n,ev){
+  if(n.all){const c=n.all.map(x=>evalNode(x,ev));return {kind:'all',ok:c.every(x=>x.ok),children:c};}
+  if(n.any){const c=n.any.map(x=>evalNode(x,ev));return {kind:'any',ok:c.some(x=>x.ok),children:c};}
+  if(n.not){const c=evalNode(n.not,ev);return {kind:'not',ok:!c.ok,children:[c]};}
+  const actual=getField(ev,n.field),fn=OPS[n.op];
+  return {kind:'leaf',ok:!!(fn&&fn(actual,n.value)),node:n,actual:actual};
+}
+function tpl(t,ev){return String(t||'').replace(/\{\{\s*([^}|]+?)\s*(?:\|\s*(\w+)\s*)?\}\}/g,(m,p,f)=>{
+  const v=getField(ev,p);if(v===undefined||v===null)return '⟨missing: '+p+'⟩';
+  if(f==='number'&&!isNaN(Number(v)))return nf(v);return typeof v==='object'?JSON.stringify(v):String(v);});}
+function typeOf(v){if(Array.isArray(v))return 'list';if(typeof v==='number')return v>1e11?'time (epoch ms)':'number';
+  if(typeof v==='boolean')return 'yes/no';if(typeof v==='string'&&/^\d{4}-\d\d-\d\dT/.test(v))return 'time (ISO)';return 'text';}
+function learn(ev){for(const p in ev.flat){if(!S.fields[p])S.fields[p]={type:typeOf(ev.flat[p]),example:ev.flat[p]};}}
+function withinHours(h){const now=S.night?22*60+30:10*60+15;const m=s=>{const a=String(s).split(':');return (+a[0])*60+(+a[1]||0);};
+  const f=m(h.from),t=m(h.to);return f<=t?(now>=f&&now<t):(now>=f||now<t);}
+function rcpt(to){const i=String(to).indexOf(':'),k=to.slice(0,i),v=to.slice(i+1),t=TEAMS[v];
+  if(k==='oncall')return {person:t?t.oncall:v,label:(t?t.oncall:v)+' (on call)',isTeam:false,team:v};
+  if(k==='team')return {person:t?t.oncall:v,label:(t?t.name:cap(v))+' team',isTeam:true,team:v};
+  return {person:t?t.oncall:cap(v),label:t?t.oncall:cap(v),isTeam:false,team:v};}
+function rcptPhrase(to){const i=String(to).indexOf(':'),k=to.slice(0,i),v=to.slice(i+1),t=TEAMS[v];
+  if(k==='oncall')return 'the '+(t?t.name:cap(v))+' on-call person';if(k==='team')return 'the '+(t?t.name:cap(v))+' team';return t?t.oncall:cap(v);}
+function tl(al,at,text){al.timeline.push({at:at,text:text});}
+function audit(who,action,target,detail,at){const prev=S.audit[0]?S.audit[0].hash:'00000000';
+  const e={at:at||Date.now(),actor:who,action:action,target:target||'',detail:detail||''};
+  let h=2166136261;const s=prev+JSON.stringify(e);for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}
+  e.hash=('0000000'+(h>>>0).toString(16)).slice(-8);e.prev=prev;S.audit.unshift(e);}
+
+function ingest(raw,source,o){o=o||{};const t=o.at||Date.now();const n=normalise(raw,source);
+  const ev={id:'e'+(++seq),source:source,at:t,raw:raw,flat:n.flat,attrs:n.attrs,paths:n.paths,results:[]};
+  S.eventsTotal++;learn(ev);
+  if(o.store!==false){S.events.unshift(ev);if(S.events.length>60)S.events.pop();}
+  for(const r of S.rules){if(!r.enabled)continue;const tr=evalNode(r.when,ev);if(!tr.ok)continue;
+    const fp=r.id+'|'+((r.group&&r.group.by)||[]).map(p=>String(getField(ev,p))).join('|');
+    let al=S.alerts.find(a=>a.fp===fp&&a.status!=='resolved');
+    if(r.resolve_when&&evalNode(r.resolve_when,ev).ok){
+      if(al){resolveAlert(al,'Herald (automatic)','the source reported the problem has cleared',t);ev.results.push({rule:r.id,alert:al.id,kind:'resolved'});}
+      else ev.results.push({rule:r.id,kind:'nothing-open'});continue;}
+    r.hits=(r.hits||0)+1;r.lastFired=t;
+    if(al){al.count++;al.lastSeen=t;ev.results.push({rule:r.id,alert:al.id,kind:'counted'});}
+    else{al=createAlert(r,ev,tr,t,fp,o);ev.results.push({rule:r.id,alert:al.id,kind:'created'});}
+  }
+  return ev;}
+function createAlert(r,ev,tr,t,fp,o){
+  const sev=r.severity==='event'?(sevName(ev.attrs.severity)||'warning'):r.severity;
+  const al={id:'a'+(++seq),code:nextCode(),rule:r.id,ruleName:r.name,owner:r.owner,fp:fp,status:'firing',severity:sev,colour:r.present.colour||SEVS[sev].col,
+    title:tpl(r.present.title,ev)||r.name,body:tpl(r.present.body,ev),
+    fields:(r.present.fields||[]).map(p=>({path:p,value:getField(ev,p),hi:(r.present.highlight||[]).includes(p)})),
+    count:1,firstSeen:t,lastSeen:t,event:ev,trace:tr,when:clone(r.when),runbook:(r.runbook&&S.runbooks[r.runbook])?r.runbook:null,run:null,timeline:[]};
+  if(al.runbook)al.run=S.runbooks[al.runbook].steps.map(()=>({state:'todo',runs:0,output:[],approved:false}));
+  S.alerts.unshift(al);tl(al,t,'Alert opened by the rule “'+r.name+'”');
+  for(const n of (r.notify||[])){let chans=n.channels||[],note='';
+    if(n.hours&&!withinHours(n.hours)){chans=n.else||[];note='outside '+n.hours.from+' to '+n.hours.to;
+      tl(al,t,'Outside '+n.hours.from+' to '+n.hours.to+' for '+rcpt(n.to).label+': using '+(chans.map(c=>CH[c]).join(', ')||'no channel')+' instead');}
+    const rc=rcpt(n.to);for(const ch of chans)queueNotif(al,rc,ch,t,o,note);}
+  return al;}
+const SEED_LAT={ui:14,email:238,sms:412,phone:655};
+function queueNotif(al,rc,ch,t,o,note){
+  const to=ch==='ui'?(rc.isTeam?rc.label:rc.person):(ch==='email'&&rc.isTeam?rc.label+' mailbox':rc.person);
+  const n={id:'n'+(++seq),alert:al.id,to:to,channel:ch,status:'pending',attempts:0,at:t,latency:null,note:note||'',timer:null};
+  S.notifs.unshift(n);
+  if(o&&o.seed){n.attempts=1;deliver(n,SEED_LAT[ch],true);return;}
+  const d={ui:12+Math.random()*14,email:150+Math.random()*170,sms:250+Math.random()*230,phone:500+Math.random()*300}[ch];
+  n.timer=setTimeout(()=>{attempt(n);render();},d);}
+function attempt(n){n.timer=null;n.attempts++;
+  if(n.channel==='sms'&&S.smsDown){const al=alertById(n.alert);
+    if(n.attempts>=5){n.status='parked';if(!n.fallback){n.fallback=true;tl(al,Date.now(),'SMS to '+n.to+' failed 5 times. Kept in the queue and sent by email as well');
+      queueNotif(al,{person:n.to,label:n.to,isTeam:false},'email',Date.now(),null,'fallback for SMS');}return;}
+    n.status='retrying';const wait=1500*Math.pow(2,n.attempts-1);n.nextIn=wait;
+    if(n.attempts===1)tl(al,Date.now(),'SMS to '+n.to+' failed: gateway not responding. Retrying with growing pauses');
+    n.timer=setTimeout(()=>{attempt(n);render();},wait);return;}
+  deliver(n);}
+function deliver(n,lat,seed){n.status='delivered';n.latency=lat!=null?lat:Math.max(1,Date.now()-n.at);const at=n.at+n.latency;const al=alertById(n.alert);
+  if(n.channel==='sms')pushSms(n.to,'in',smsText(al),at);
+  if(n.channel==='email'){const m={id:'m'+(++seq),to:n.to,alert:al.id,at:at};S.emails.unshift(m);}
+  if(n.channel==='phone')S.calls.unshift({id:'c'+(++seq),to:n.to,alert:al.id,state:seed?'missed':'ringing',at:at});
+  tl(al,at,CH[n.channel]+(n.channel==='ui'?' feed updated for ':' delivered to ')+n.to+(n.attempts>1?' on attempt '+n.attempts:''));}
+function smsBack(){S.notifs.forEach(n=>{if(n.channel==='sms'&&(n.status==='retrying'||n.status==='parked')){if(n.timer)clearTimeout(n.timer);n.timer=null;n.attempts++;deliver(n);}});}
+function pushSms(person,dir,text,at){(S.threads[person]=S.threads[person]||[]).push({dir:dir,text:text,at:at||Date.now()});}
+function smsText(al){const tail=' Reply ACK '+al.code+' to acknowledge. hrld.example/a/'+al.code;const head='['+SEVS[al.severity].short+'] ';
+  const room=160-head.length-tail.length;let t=al.title;if(t.length>room)t=t.slice(0,room-1)+'…';return head+t+tail;}
+function voiceText(al,to){return 'This is Herald calling '+to+'. '+SEVS[al.severity].label+' alert. '+al.title+'. Press 1 to acknowledge. Press 2 to pass it to the team lead.';}
+
+/* ============ alert and runbook operations ============ */
+function ackAlert(al,who,via){if(al.status!=='firing')return false;al.status='acked';al.ackedBy=who;
+  tl(al,Date.now(),'Acknowledged by '+who+' ('+via+')');audit(who,'Acknowledged alert',al.title,via);
+  S.calls.forEach(c=>{if(c.alert===al.id&&c.state==='ringing'){c.state='ended';c.note='Acknowledged elsewhere';}});return true;}
+function resolveAlert(al,who,why,at){if(al.status==='resolved')return false;al.status='resolved';al.resolvedBy=who;
+  tl(al,at||Date.now(),'Resolved by '+who+(why?': '+why:''));audit(who,'Resolved alert',al.title,why||'',at);
+  S.calls.forEach(c=>{if(c.alert===al.id&&c.state==='ringing'){c.state='ended';c.note='Alert resolved';}});return true;}
+const needsApproval=st=>st.approval&&st.approval!=='none';
+function stepLock(al,rb,i){const st=rb.steps[i];if(!st.requires)return null;const rs=al.run[st.requires.step];
+  const fails=rs.output.filter(x=>!x.ok).length;if(rs.state==='done')return {text:'Not needed: step '+(st.requires.step+1)+' worked.'};
+  if(fails<st.requires.failed)return {text:'Unlocks when: '+st.condition+' ('+fails+' of '+st.requires.failed+' so far).'};return null;}
+const ACTIONS={
+  http_get:(al,p)=>({ok:true,text:'GET '+p.url+' → 503 Service Unavailable in 212 ms. 1 of 2 instances is unhealthy.'}),
+  retry_workflow:(al,p,rs)=>rs.runs<2?{ok:false,text:'Retry '+(rs.runs+1)+' of '+p.workflowId+' failed again: TIMEOUT at validate-counterparty.'}:{ok:true,resolve:'the workflow completed after a retry',text:'Retry '+(rs.runs+1)+' of '+p.workflowId+' completed. Settlement confirmed.'},
+  escalate:(al,p)=>({ok:true,text:'Escalated to '+p.team+'. Ticket CPS-4471 opened and their on-call person paged.'}),
+  failover_traffic:(al,p)=>({ok:true,text:'Traffic for '+p.service+' moved from '+p.from+' to eu-central. Error rate is now 0.4%.'}),
+  rollback_deployment:(al,p)=>({ok:true,text:'Rolled '+p.service+' back from v2.41.0 to v2.40.3.'}),
+  restart_service:(al,p)=>({ok:true,text:'Restarted '+p.instance+'. Cache warm again after 38 s.'}),
+  page_oncall:(al,p)=>({ok:true,text:'Phoned '+(TEAMS[p.team]?TEAMS[p.team].oncall:p.team)+', who is on call for '+cap(p.team)+'.'})
+};
+function stepParams(al,st){const p={};for(const k in (st.params||{}))p[k]=tpl(st.params[k],al.event);return p;}
+function runStep(al,i){const rb=S.runbooks[al.runbook],st=rb.steps[i],rs=al.run[i],who=actor();
+  if(stepLock(al,rb,i)||rs.state==='running'||rs.state==='awaiting')return;
+  const title=tpl(st.text,al.event);
+  if(!st.action){rs.state='done';rs.runs++;rs.output.push({at:Date.now(),ok:true,by:who,text:'Marked done by '+who+'.'});
+    tl(al,Date.now(),'Step '+(i+1)+' marked done by '+who);audit(who,'Completed runbook step',title,al.title);return;}
+  if(needsApproval(st)){const lead=TEAMS[teamKey(al.owner)].lead;
+    const ap={id:'p'+(++seq),code:nextCode(),alert:al.id,step:i,title:title,requestedBy:who,approver:lead,status:'pending',at:Date.now()};
+    S.approvals.unshift(ap);rs.state='awaiting';
+    pushSms(lead,'in','Herald approval needed: “'+title+'”, asked by '+who+'. Reply YES '+ap.code+' to approve or NO '+ap.code+' to reject.');
+    tl(al,Date.now(),who+' asked to run step '+(i+1)+'. Waiting for approval from '+lead);
+    audit(who,'Asked for approval',title,'approver '+lead);return;}
+  execStep(al,i,who);}
+function execStep(al,i,who){const rb=S.runbooks[al.runbook],st=rb.steps[i],rs=al.run[i];rs.state='running';
+  setTimeout(()=>{const p=stepParams(al,st);
+    const res=st.kind==='wait'?{ok:true,text:'Waited '+p.duration+' (shortened to 5 seconds in this prototype).'}:(ACTIONS[st.action]?ACTIONS[st.action](al,p,rs):{ok:true,text:'Done.'});
+    rs.runs++;rs.output.push({at:Date.now(),ok:res.ok,by:who,text:res.text});rs.state=res.ok?'done':'failed';
+    tl(al,Date.now(),'Step '+(i+1)+(res.ok?' done':' failed')+': '+res.text);
+    audit(who,res.ok?'Ran runbook step':'Ran runbook step (failed)',tpl(st.text,al.event),al.title);
+    if(res.resolve)resolveAlert(al,'Herald (automatic)',res.resolve);
+    render();},st.kind==='wait'?5000:900);}
+function approvalBlock(ap,person,viaUi){
+  if(viaUi&&S.role!=='lead')return 'Only a team lead can approve this step.';
+  if(person===ap.requestedBy)return 'You asked for this step, so someone else has to approve it.';
+  if(person!==ap.approver)return 'Only a team lead can approve this step.';return null;}
+function decide(ap,yes,who,via){const al=alertById(ap.alert),rs=al.run[ap.step];ap.status=yes?'approved':'rejected';ap.by=who;
+  if(yes){tl(al,Date.now(),'Step '+(ap.step+1)+' approved by '+who+' ('+via+')');audit(who,'Approved runbook step',ap.title,via+', asked by '+ap.requestedBy);execStep(al,ap.step,ap.requestedBy);}
+  else{rs.state='todo';rs.output.push({at:Date.now(),ok:false,by:who,text:'Approval rejected by '+who+'. Nothing was run.'});
+    tl(al,Date.now(),'Step '+(ap.step+1)+' rejected by '+who+' ('+via+')');audit(who,'Rejected runbook step',ap.title,via);}}
+function smsReply(person,text){pushSms(person,'out',text);const re=t=>pushSms(person,'in',t);
+  const m=text.trim().match(/^(ACK|RES|RESOLVE|YES|NO)\s+(\d{4})$/i);
+  if(!m){re('Not understood. Reply ACK, RESOLVE, YES or NO followed by the 4-digit code.');return;}
+  const cmd=m[1].toUpperCase(),code=m[2];
+  if(cmd==='YES'||cmd==='NO'){const ap=S.approvals.find(a=>a.code===code);
+    if(!ap)return re('There is no approval request with code '+code+'.');
+    if(ap.status!=='pending')return re('That request was already '+ap.status+'.');
+    const b=approvalBlock(ap,person,false);if(b)return re(b);
+    decide(ap,cmd==='YES',person,'SMS reply');re(cmd==='YES'?'Approved. Running “'+ap.title+'” now.':'Rejected. Nothing was run.');return;}
+  const al=S.alerts.find(a=>a.code===code);if(!al)return re('There is no alert with code '+code+'.');
+  if(cmd==='ACK'){re(ackAlert(al,person,'SMS reply')?'Acknowledged: '+al.title:'That alert is already '+(al.status==='acked'?'acknowledged':'resolved')+'.');}
+  else re(resolveAlert(al,person,'by SMS reply')?'Resolved: '+al.title:'That alert is already resolved.');}
+
+/* ============ plain language ============ */
+function flabel(f){f=String(f||'');if(f.charAt(0)==='@')return {'@severity':'severity','@service':'service','@type':'event type','@source':'source','@timestamp':'time'}[f]||f.slice(1);
+  let s=f.split('.');while(s.length>1&&['payload','data','labels','meta','annotations'].includes(s[0]))s.shift();
+  return s.join(' ').replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').toLowerCase()||'(no field)';}
+function vfmt(v){if(Array.isArray(v))return joinAnd(v.map(String),'or');if(typeof v==='number')return nf(v);return String(v==null?'':v);}
+function leafPhrase(n){const l=flabel(n.field);switch(n.op){
+  case 'exists':return l+' has a value';
+  case 'severity_gte':return l+' is '+(sevName(n.value)||vfmt(n.value))+' or worse';
+  case 'glob':return l+' matches '+vfmt(n.value);
+  case 'regex':return l+' matches the pattern '+vfmt(n.value);
+  default:return l+' '+(OPL[n.op]||n.op)+' '+vfmt(n.value);}}
+function condPhrase(n,top){
+  if(n.all||n.any){const k=n.all||n.any;if(!k.length)return '';const s=joinAnd(k.map(x=>condPhrase(x,false)).filter(Boolean),n.all?'and':'or');return top||k.length<2?s:'('+s+')';}
+  if(n.not){const k=n.not.any||[n.not];return 'none of these is true: '+k.map(x=>condPhrase(x,false)).join('; ');}
+  return leafPhrase(n);}
+function notifyPhrase(n){const who=rcptPhrase(n.to),v={phone:'call',sms:'text',email:'email'};
+  const part=ch=>{const a=ch.filter(c=>c!=='ui').map(c=>v[c]);let s=a.length?joinAnd(a)+' '+who:'';if(ch.includes('ui'))s+=(s?' and ':'')+'show it to '+who+' in Herald';return s;};
+  let s=part(n.channels||[]);if(!s)return '';
+  if(n.hours)s+=' between '+n.hours.from+' and '+n.hours.to+((n.else&&n.else.length)?' (outside those hours, '+part(n.else)+')':' (outside those hours, do nothing)');return s;}
+function ruleSentence(r){const c=condPhrase(r.when,true);const acts=(r.notify||[]).map(notifyPhrase).filter(Boolean);
+  let s=(c?'When '+c:'For every event that arrives')+', '+(acts.length?joinAnd(acts):'tell nobody yet')+'.';
+  if(r.group&&r.group.by&&r.group.by.length)s+=' Repeats with the same '+joinAnd(r.group.by.map(flabel))+' are counted on one alert ('+r.group.window+' window).';return s;}
+function needText(n){switch(n.op){case 'eq':return 'needs to be '+vfmt(n.value);case 'ne':return 'must not be '+vfmt(n.value);case 'gt':return 'needs to be over '+vfmt(n.value);
+  case 'gte':return 'needs at least '+vfmt(n.value);case 'lt':return 'needs to be under '+vfmt(n.value);case 'lte':return 'needs at most '+vfmt(n.value);
+  case 'in':return 'needs to be one of '+vfmt(n.value);case 'contains':return 'needs to contain '+vfmt(n.value);case 'glob':case 'regex':return 'needs to match '+vfmt(n.value);
+  case 'exists':return 'needs a value';case 'severity_gte':return 'needs '+(sevName(n.value)||n.value)+' or worse';}return '';}
+function firstFail(tr){if(tr.ok)return null;
+  if(tr.kind==='leaf')return flabel(tr.node.field)+' is '+(tr.actual===undefined?'missing':vfmt(tr.actual))+', '+needText(tr.node);
+  if(tr.kind==='not')return 'an excluded condition is true';
+  if(tr.kind==='any')return tr.children.length?'none of the alternatives matched (first: '+firstFail(tr.children[0])+')':'no conditions in the group';
+  for(const c of tr.children){const f=firstFail(c);if(f)return f;}return 'did not match';}
+function evLabel(ev){const t=ev.attrs.type||'(no type found)';const s=ev.attrs.service;return t+(s?' · '+s:'');}
+
+/* ============ simulate ============ */
+function toast(text,btn){const id=++seq;S.toasts.push({id:id,text:text,btn:btn});if(S.toasts.length>3)S.toasts.shift();
+  setTimeout(()=>{S.toasts=S.toasts.filter(x=>x.id!==id);renderToasts();},8000);}
+function announce(ev,label){const r=ev.results[0];
+  if(!r){toast(label+': no rule matched, so nobody was disturbed.',ev.attrs.type&&String(ev.attrs.type).indexOf('batch')>=0?{label:'Build a rule from it',act:'ruleFromEvent',id:ev.id}:{label:'Why?',act:'openEvent',id:ev.id});return;}
+  const al=r.alert&&alertById(r.alert),own=al?TEAMS[teamKey(al.owner)].name:'';
+  const more=ev.results.length>1?' (+'+(ev.results.length-1)+' more rule'+(ev.results.length>2?'s':'')+')':'';
+  if(r.kind==='created')toast(label+': opened an alert for '+own+more+'.',{label:'View',act:'gotoAlert',id:al.id});
+  else if(r.kind==='counted')toast(label+': counted on the open alert (×'+nf(al.count)+'). Nobody was notified again.',{label:'View',act:'gotoAlert',id:al.id});
+  else if(r.kind==='resolved')toast(label+': closed “'+al.title+'” automatically.',{label:'View',act:'gotoAlert',id:al.id});
+  else toast(label+': the problem has cleared, and there was no open alert to close.');}
+function sim(k){let s,raw,label;
+  if(k==='burst')return burst();
+  if(k==='resolved'){s=SAMPLES.metric;raw=clone(s.raw);raw.status='resolved';raw.endsAt=new Date().toISOString();label='Metric back to normal';}
+  else if(k==='tradeSmall'){s=SAMPLES.trade;raw=clone(s.raw);raw.payload.notional=2000000;raw.payload.tradeId='T-998912';label='Trade rejected, 2,000,000 EUR';}
+  else{s=SAMPLES[k];raw=clone(s.raw);label=s.label;}
+  const ev=ingest(raw,s.source);announce(ev,label);return ev;}
+function burst(){const total=500,t0=Date.now();let sent=0,first=null;
+  const step=()=>{for(let i=0;i<50;i++){const raw=clone(SAMPLES.pricing.raw);raw.latency_ms=1200+((sent*37)%900);
+      const ev=ingest(raw,SAMPLES.pricing.source,{store:sent===0});if(!first)first=ev;sent++;}
+    first.burstN=sent;render();
+    if(sent<total)setTimeout(step,70);
+    else{const r=first.results[0],al=r&&r.alert&&alertById(r.alert);
+      if(al)toast('500 pricing warnings in '+((Date.now()-t0)/1000).toFixed(1)+' s became one alert showing ×'+nf(al.count)+'.',{label:'View',act:'gotoAlert',id:al.id});
+      else toast('500 pricing warnings received. No enabled rule matched them.',{label:'Why?',act:'openEvent',id:first.id});
+      render();}};
+  step();}
+
+/* ============ rule drafts ============ */
+function blankRule(){const o=T().owner;return {id:null,owner:o,name:'',enabled:true,version:0,when:{all:[]},severity:'warning',
+  present:{title:'',body:'',fields:[],highlight:[],colour:'amber'},group:{by:[],window:'5m'},
+  notify:[{to:T().personal?o:'team:'+S.team,channels:['ui']}],runbook:null};}
+function batchRule(owner){const k=teamKey(owner),p=TEAMS[k].personal;return {id:null,owner:owner,name:'Batch jobs failing in prod',enabled:true,version:0,
+  when:{all:[{field:'@type',op:'glob',value:'*.batch.job.failed'},{field:'data.env',op:'eq',value:'prod'}]},severity:'critical',
+  present:{title:'Batch job {{subject}} failed (exit code {{data.exitCode}})',body:'{{data.lastLog}}. Attempt {{data.attempt}}, job {{data.jobId}}.',fields:['subject','data.jobId','data.attempt','data.exitCode','data.lastLog'],highlight:['data.lastLog'],colour:'red'},
+  group:{by:['data.jobId'],window:'15m'},
+  notify:p?[{to:owner,channels:['sms','ui']}]:[{to:'oncall:'+k,channels:['phone','sms']},{to:'team:'+k,channels:['ui']}],runbook:null};}
+const CANNED=[
+  {text:'Email the Rates team when a rates trade over 10,000,000 is rejected',keys:['rates','trade','rejected','10,000,000'],make:()=>{const r=clone(SEED_RULES[2]);r.id=null;r.version=0;r.name='Large rejected rates trades (draft)';return r;}},
+  {text:'Text Anna when anything critical happens on payments-api between 08:00 and 20:00, otherwise email her',keys:['anna','payments','critical','text'],make:()=>{const r=clone(SEED_RULES[3]);r.id=null;r.version=0;r.name='Critical payments-api alerts for Anna (draft)';return r;}},
+  {text:'Call the on-call person when a batch job fails in prod',keys:['batch','job','fails','prod'],make:()=>batchRule(T().owner)}
+];
+function normDraft(r){const fix=n=>{if(n.not){if(!n.not.any)n.not={any:[n.not]};n.not.any.forEach(fix);}else if(n.all)n.all.forEach(fix);else if(n.any)n.any.forEach(fix);};
+  if(!isGroup(r.when))r.when={all:[r.when]};fix(r.when);r.present=r.present||{};r.present.fields=r.present.fields||[];r.present.highlight=r.present.highlight||[];
+  r.group=r.group||{by:[],window:'5m'};r.notify=r.notify||[];return r;}
+const kids=n=>n.all||n.any||n.not.any;
+function nodeAt(path){let n=S.draft.when;if(path==='')return n;for(const i of String(path).split('.'))n=kids(n)[+i];return n;}
+function parentOf(path){const p=String(path).split('.');const idx=+p.pop();return {parent:nodeAt(p.join('.')),idx:idx};}
+function startEdit(draft,isNew,ai,sampleId){S.draft=normDraft(draft);S.draftNew=isNew;S.draftAI=!!ai;
+  const hit=S.events.find(e=>evalNode(S.draft.when,e).ok&&kids(S.draft.when).length);
+  S.edSample=sampleId||(hit?hit.id:(S.events[0]?S.events[0].id:null));S.view='rules';S.drawer=null;}
+
+/* ============ runbook paste parser ============ */
+function parseRunbook(text){const lines=String(text).split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  let parts=lines.filter(l=>/^(\d+[.)]|[-*•]|\[[ x]\])\s+/i.test(l)).map(l=>l.replace(/^(\d+[.)]|[-*•]|\[[ x]\])\s+/i,''));
+  if(!parts.length)parts=String(text).replace(/\n+/g,' ').split(/(?<=[.!?])\s+|,\s+(?:and\s+)?(?=(?:then\s+)?(?:if|wait|restart|retry|call|check|open|post|roll|escalate|fail|page|verify)\b)/i).map(s=>s.trim().replace(/^(and|then)\s+/i,'')).filter(s=>s.length>2);
+  for(let i=0;i<parts.length-1;i++){if(/^if\b/i.test(parts[i])&&!/[:,]/.test(parts[i])){parts[i]=parts[i]+', '+parts[i+1];parts.splice(i+1,1);}}
+  return parts.map(p=>{let condition=null;let t=p;const m=t.match(/^if\s+(.+?)(?::|,)\s*(.+)$/i);if(m){condition=m[1];t=m[2];}
+    let approval='none';if(/approv/i.test(p))approval=/team lead/i.test(p)?'role:team-lead':'required';
+    let kind='manual',action=null;
+    if(/\bwait\b/i.test(t)){kind='wait';action='wait';}
+    else if(/\brestart\b/i.test(t)){kind='action';action='restart_service';}
+    else if(/\bretry\b/i.test(t)){kind='action';action='retry_workflow';}
+    else if(/roll\s*(it\s*)?back/i.test(t)){kind='action';action='rollback_deployment';}
+    else if(/fail\s*(traffic\s*)?over/i.test(t)){kind='action';action='failover_traffic';}
+    else if(/\b(escalate|call|page)\b/i.test(t)){kind='action';action=/escalate/i.test(t)?'escalate':'page_oncall';}
+    else if(/\b(check|verify|confirm)\b|\?$/i.test(t)){kind='check';}
+    return {text:cap(t.replace(/\.$/,'')),kind:kind,action:action,params:{},condition:condition,approval:approval};});}
+
+/* ============ view pieces ============ */
+const sevTag=s=>`<span class="sev sev-${s}"><span aria-hidden="true">${SEVS[s].g}</span>${SEVS[s].label}</span>`;
+const statusText=a=>a.status==='firing'?'Needs attention':a.status==='acked'?'Acknowledged by '+a.ackedBy:'Resolved';
+function chipHtml(n){let s=n.status,t;
+  if(s==='delivered')t=n.channel==='ui'?'shown':'delivered';else if(s==='retrying')t='retrying '+n.attempts+'/5';else if(s==='parked')t='held, gateway down';else t='sending';
+  return `<span class="chip ${s}">${CH[n.channel]} · ${esc(n.to)} · ${t}</span>`;}
+function alertRow(a){const ns=S.notifs.filter(n=>n.alert===a.id).slice().reverse();
+  return `<article class="alert st-${a.status} c-${a.colour}" data-act="openAlert" data-id="${a.id}" tabindex="0" aria-label="Open alert: ${esc(a.title)}">
+    <div class="tile" aria-hidden="true">${SEVS[a.severity].g}</div>
+    <div class="al-main">
+      <div class="row">${sevTag(a.severity)}${a.count>1?`<span class="count" title="Seen ${nf(a.count)} times">×${nf(a.count)}</span>`:''}<span class="pill ${a.status}">${esc(statusText(a))}</span></div>
+      <h3>${esc(a.title)}</h3>
+      ${a.body?`<p class="muted" style="overflow-wrap:anywhere">${esc(a.body)}</p>`:''}
+      <div class="note num">First seen ${clock(a.firstSeen)} · Last seen ${clock(a.lastSeen)} · Rule: ${esc(a.ruleName)}</div>
+      <div class="chips">${ns.map(chipHtml).join('')}</div>
+    </div>
+    <div class="al-actions">
+      ${a.status==='firing'?`<button class="btn sm pri" data-act="ack" data-id="${a.id}">Acknowledge</button>`:''}
+      ${a.status!=='resolved'?`<button class="btn sm" data-act="resolve" data-id="${a.id}">Resolve</button>`:''}
+    </div></article>`;}
+function evResult(ev){if(!ev.results.length)return '<span class="muted">No rule matched</span>';
+  return ev.results.map(r=>{const al=r.alert&&alertById(r.alert);const rn=(ruleById(r.rule)||{}).name||'rule';
+    return r.kind==='created'?'Opened alert':r.kind==='counted'?'Counted on open alert'+(al?' (×'+nf(al.count)+')':''):r.kind==='resolved'?'Closed alert':'Cleared, nothing open';}).join(' · ');}
+function viewFeed(){const t=T(),mine=S.alerts.filter(a=>a.owner===t.owner),f=S.f;
+  const shown=mine.filter(a=>(f.status==='all'||(f.status==='open'?a.status!=='resolved':a.status===f.status))&&(f.sev==='all'||a.severity===f.sev));
+  const openN=mine.filter(a=>a.status!=='resolved').length;
+  const seg=(key,lab,opts)=>`<div class="seg" role="group" aria-label="${lab}">${opts.map(o=>`<button class="segb" data-act="filter" data-k="${key}" data-v="${o[0]}" aria-pressed="${f[key]===o[0]}">${o[1]}</button>`).join('')}</div>`;
+  let body;
+  if(!mine.length)body=`<div class="empty"><h2>No alerts for ${esc(t.name)} yet</h2><p class="muted">Alerts appear here the moment a rule matches an event. No refresh needed.</p><button class="btn pri" data-act="testEvent">Send a test event</button></div>`;
+  else if(!shown.length)body=`<div class="empty"><h2>Nothing matches these filters</h2><p class="muted">${openN?openN+' alert'+(openN>1?'s are':' is')+' open under other filters.':'Everything for '+esc(t.name)+' is resolved.'}</p><div class="row"><button class="btn" data-act="filterReset">Show all alerts</button><button class="btn" data-act="testEvent">Send a test event</button></div></div>`;
+  else body=`<div class="stack">${shown.map(alertRow).join('')}</div>`;
+  const evs=S.events.slice(0,8);
+  return `<div class="row"><div class="grow"><h1>Live feed</h1><p class="muted">${esc(t.name)} · ${openN} open · on call now: ${esc(t.oncall)}</p></div>
+      <span class="live"><span class="dot pulse"></span>Live, updates pushed as they happen</span></div>
+    <div class="row">${seg('status','Filter by status',[['open','Open'],['firing','Needs attention'],['acked','Acknowledged'],['resolved','Resolved'],['all','All']])}
+      ${seg('sev','Filter by severity',[['all','Any severity'],['critical','Critical'],['error','Error'],['warning','Warning'],['info','Info']])}</div>
+    ${body}
+    <section class="card"><div class="row"><h2 class="grow">Events received</h2><span class="note num">${nf(S.eventsTotal)} in total, all sources and teams</span></div>
+      <div>${evs.map(e=>`<div class="evrow"><span class="note num">${clock(e.at)}</span>
+        <div style="min-width:0"><div style="overflow-wrap:anywhere"><b>${esc(evLabel(e))}</b>${e.burstN?` <span class="count">×${nf(e.burstN)} burst</span>`:''}</div><div class="note">${esc(e.source)} · ${evResult(e)}</div></div>
+        <button class="btn sm" data-act="openEvent" data-id="${e.id}">${e.results.length?'Details':'Why not?'}</button></div>`).join('')||'<p class="muted">No events yet.</p>'}</div></section>`;}
+
+/* ---- drawer ---- */
+function traceHtml(tr){if(tr.kind==='leaf'){const n=tr.node;
+    return `<li><span class="tick ${tr.ok?'y':'n'}" aria-label="${tr.ok?'matched':'did not match'}">${tr.ok?'✓':'✗'}</span><span><code>${esc(n.field)}</code> ${esc(OPL[n.op]||n.op)} ${n.op==='exists'?'':`<b>${esc(vfmt(n.value))}</b>`}</span><span class="muted">event has ${tr.actual===undefined?'no such field':`<code>${esc(vfmt(tr.actual))}</code>`}</span></li>`;}
+  const lab={all:'All of these',any:'Any of these',not:'None of these'}[tr.kind];
+  return `<li><span class="tick ${tr.ok?'y':'n'}">${tr.ok?'✓':'✗'}</span><span>${lab}</span></li><ul>${tr.children.map(traceHtml).join('')}</ul>`;}
+function varHi(text){return esc(text).replace(/\{\{[^}]+\}\}/g,m=>`<span class="var">${m}</span>`);}
+function approvalBadge(st){return !needsApproval(st)?'':`<span class="badge ap">${st.approval==='role:team-lead'?'Requires approval from the team lead':'Requires approval'}</span>`;}
+function runStepHtml(a,rb,i){const st=rb.steps[i],rs=a.run[i],lock=stepLock(a,rb,i);
+  const ap=S.approvals.find(x=>x.alert===a.id&&x.step===i&&x.status==='pending');
+  const stateLab={todo:'To do',running:st.kind==='wait'?'Waiting…':'Running…',awaiting:'Awaiting approval',done:'Done',failed:'Failed'}[rs.state];
+  const p=stepParams(a,st);const ps=Object.keys(p).map(k=>k+'='+p[k]).join(', ');
+  let ctl='';
+  if(rs.state==='awaiting'&&ap){const blk=approvalBlock(ap,actor(),true);
+    ctl=`<div class="banner"><div>Waiting for approval from <b>${esc(ap.approver)}</b> (team lead). Asked by ${esc(ap.requestedBy)} at ${clock(ap.at)}.</div>
+      <div class="row" style="margin-top:6px"><button class="btn sm pri" data-act="approve" data-id="${ap.id}" ${blk?'disabled':''}>Approve</button><button class="btn sm warn" data-act="reject" data-id="${ap.id}" ${blk&&actor()!==ap.requestedBy?'disabled':''}>${actor()===ap.requestedBy?'Cancel request':'Reject'}</button></div>
+      ${blk?`<div class="note" style="margin-top:6px">${esc(blk)} ${S.role!=='lead'?'Switch “Signed in as” to Team lead to try it.':''}</div>`:''}
+      <div class="note" style="margin-top:6px">Or reply <code>YES ${ap.code}</code> by SMS from ${esc(ap.approver)}’s phone. <button class="btn link" data-act="openPhone" data-who="${esc(ap.approver)}">Open the phone</button></div></div>`;}
+  else if(lock)ctl=`<div class="note">${esc(lock.text)}</div>`;
+  else if(rs.state==='todo'||rs.state==='failed'){const lab=!st.action?'Mark done':st.kind==='wait'?'Start timer':rs.state==='failed'?'Run again':needsApproval(st)?'Ask to run':'Run';
+    ctl=`<div class="row"><button class="btn sm ${rs.state==='failed'?'':'pri'}" data-act="runStep" data-id="${a.id}" data-i="${i}">${lab}</button>${needsApproval(st)?'<span class="note">Runs only after approval.</span>':''}</div>`;}
+  return `<li class="step"><div class="sn ${rs.state}" aria-hidden="true">${rs.state==='done'?'✓':rs.state==='failed'?'!':i+1}</div>
+    <div class="sb"><div class="row"><b style="overflow-wrap:anywhere">${esc(tpl(st.text,a.event))}</b></div>
+      <div class="row"><span class="badge">${stateLab}</span><span class="badge">${{check:'Check',action:'Action',manual:'By hand',wait:'Wait'}[st.kind]}</span>${approvalBadge(st)}</div>
+      ${st.condition?`<div class="note">Only if: ${esc(st.condition)}</div>`:''}
+      ${st.action&&st.kind!=='wait'?`<div class="note mono" style="overflow-wrap:anywhere">${esc(st.action)}(${esc(ps)})</div>`:''}
+      ${rs.output.map(o=>`<div class="out ${o.ok?'':'bad'}"><span class="num">${clock(o.at)}</span> ${esc(o.text)}</div>`).join('')}
+      ${ctl}</div></li>`;}
+function drawerAlert(a){const rb=a.runbook&&S.runbooks[a.runbook];const ns=S.notifs.filter(n=>n.alert===a.id).slice().reverse();
+  $('drawerHead').innerHTML=`<div class="row"><div class="row grow">${sevTag(a.severity)}${a.count>1?`<span class="count">×${nf(a.count)}</span>`:''}<span class="pill ${a.status}">${esc(statusText(a))}</span></div><button class="btn sm" id="drClose" data-act="closeDrawer">Close</button></div>
+    <h2 style="overflow-wrap:anywhere">${esc(a.title)}</h2>
+    <div class="row">${a.status==='firing'?`<button class="btn pri" data-act="ack" data-id="${a.id}">Acknowledge</button>`:''}${a.status!=='resolved'?`<button class="btn" data-act="resolve" data-id="${a.id}">Resolve</button>`:`<span class="note">Resolved by ${esc(a.resolvedBy)}</span>`}</div>`;
+  $('drawerBody').innerHTML=`
+    <section class="sec">${a.body?`<p style="overflow-wrap:anywhere">${esc(a.body)}</p>`:''}
+      <dl class="kv">${a.fields.map(f=>`<dt><code>${esc(f.path)}</code></dt><dd class="${f.hi?'hi':''}">${f.value===undefined?'<span class="muted">⟨missing⟩</span>':esc(vfmt(f.value))}</dd>`).join('')}
+        <dt>Seen</dt><dd class="num">${nf(a.count)} time${a.count>1?'s':''}, first ${clock(a.firstSeen)}, last ${clock(a.lastSeen)}</dd>
+        <dt>Rule</dt><dd>${esc(a.ruleName)} · ${esc(TEAMS[teamKey(a.owner)].name)}</dd><dt>Reply code</dt><dd class="mono">${a.code}</dd></dl></section>
+    <section class="sec"><div class="row"><h2 class="grow">What to do next</h2>${rb?`<span class="badge">Runbook: ${esc(rb.title)}</span>`:''}</div>
+      ${rb?`${rb.parsedBy==='ai'&&!rb.reviewedBy?'<div class="banner info">These steps were drafted by AI from free text and have not been reviewed yet.</div>':''}<p class="note">Values in the steps are filled in from this event.</p><ol>${rb.steps.map((s,i)=>runStepHtml(a,rb,i)).join('')}</ol>`
+          :'<p class="muted">No runbook is attached to this rule. Add one in the rule editor under “Then”.</p>'}</section>
+    <section class="sec"><h2>Who was told</h2><div class="chips">${ns.map(chipHtml).join('')||'<span class="muted">Nobody.</span>'}</div></section>
+    <section class="sec"><h2>Why did this match?</h2><ul class="why">${traceHtml(a.trace)}</ul></section>
+    <section class="sec"><h2>Timeline</h2><ul class="tl">${a.timeline.slice().sort((x,y)=>x.at-y.at).map(t=>`<li><span class="note num">${clock(t.at)}</span><span style="overflow-wrap:anywhere">${esc(t.text)}</span></li>`).join('')}</ul></section>
+    <section class="sec"><h2>Original event</h2><p class="note">From ${esc(a.event.source)}, exactly as received.</p><pre>${esc(JSON.stringify(a.event.raw,null,2))}</pre></section>`;}
+function drawerEvent(ev){
+  $('drawerHead').innerHTML=`<div class="row"><span class="lab grow">Event received ${clock(ev.at)} from ${esc(ev.source)}</span><button class="btn sm" id="drClose" data-act="closeDrawer">Close</button></div>
+    <h2 style="overflow-wrap:anywhere">${esc(evLabel(ev))}</h2><div class="row"><span>${evResult(ev)}</span><button class="btn sm" data-act="ruleFromEvent" data-id="${ev.id}">Build a rule from this event</button></div>`;
+  const al=['type','severity','timestamp','service'];
+  $('drawerBody').innerHTML=`
+    <section class="sec"><h2>What Herald recognised</h2><dl class="kv">${al.map(k=>`<dt>${cap(k)}</dt><dd>${ev.attrs[k]!==undefined?`${esc(vfmt(ev.attrs[k]))} <span class="muted">from <code>${esc(ev.paths[k])}</code></span>`:'<span class="muted">not found. Rules can still use any field below.</span>'}</dd>`).join('')}</dl></section>
+    <section class="sec"><h2>Rule by rule</h2>${S.rules.map(r=>{const tr=evalNode(r.when,ev);
+      return `<div class="prev"><div class="row"><span class="tick ${tr.ok&&r.enabled?'y':'n'}">${tr.ok&&r.enabled?'✓':'✗'}</span><b class="grow">${esc(r.name)}</b><span class="note">${esc(TEAMS[teamKey(r.owner)].name)}</span></div>
+        ${!r.enabled?'<div class="note">This rule is switched off.</div>':tr.ok?'<div class="note">Matched.</div>':`<div class="note">Did not match: ${esc(firstFail(tr))}.</div>`}
+        <ul class="why">${traceHtml(tr)}</ul></div>`;}).join('')}</section>
+    <section class="sec"><h2>Original event</h2><pre>${esc(JSON.stringify(ev.raw,null,2))}</pre></section>`;}
+
+/* ---- rules ---- */
+function viewRules(){if(S.draft)return viewEditor();
+  const mine=T().owner;const rs=S.rules.slice().sort((a,b)=>(b.owner===mine)-(a.owner===mine));
+  return `<div class="row"><div class="grow"><h1>Rules</h1><p class="muted">A rule says which events matter, who hears about them, and how the alert looks. Changes apply to the next event, with no restart.</p></div>
+      <button class="btn pri" data-act="newRule">New rule</button></div>
+    ${canEdit()?'':'<div class="banner info">You are signed in as a responder, so rules are read-only. Switch “Signed in as” to Rule editor or Team lead to change them.</div>'}
+    <div class="stack">${rs.map(r=>`<div class="rule"><div class="stack" style="gap:5px"><div class="row"><span class="badge">${esc(TEAMS[teamKey(r.owner)].name)}</span><h3>${esc(r.name)}</h3><span class="note mono">v${r.version}</span></div>
+        <p style="overflow-wrap:anywhere">${esc(ruleSentence(r))}</p></div>
+      <div class="rule-side"><div class="stat"><span class="lab">Fired</span><b>${nf(r.hits||0)}</b></div><div class="stat"><span class="lab">Last fired</span><b>${r.lastFired?clock(r.lastFired):'never'}</b></div>
+        <label class="chk"><input type="checkbox" id="en-${r.id}" data-onc="ruleToggle" data-id="${r.id}" ${r.enabled?'checked':''} ${canEdit()?'':'disabled'}> On</label>
+        <button class="btn sm" data-act="editRule" data-id="${r.id}">${canEdit()?'Edit':'Open'}</button></div></div>`).join('')}</div>`;}
+function groupHtml(node,path){const mode=node.all?'all':node.any?'any':'none';const ks=kids(node);const pid=path===''?'root':path;
+  return `<div class="grp"><div class="row"><label class="row" for="gm-${pid}" style="gap:6px">Match <select class="in" id="gm-${pid}" data-onc="grpMode" data-path="${path}">${opt('all','all of these',mode)}${opt('any','any of these',mode)}${opt('none','none of these',mode)}</select></label>
+      ${path!==''?`<button class="btn sm" data-act="delCond" data-path="${path}" style="margin-left:auto">Remove group</button>`:''}</div>
+    ${ks.map((k,i)=>{const p=path===''?String(i):path+'.'+i;return isGroup(k)?groupHtml(k,p):condHtml(k,p);}).join('')}
+    ${ks.length?'':'<p class="note">No conditions yet. Add one, or click a field in the sample event.</p>'}
+    <div class="row"><button class="btn sm" data-act="addCond" data-path="${path}">Add condition</button>${path===''?`<button class="btn sm" data-act="addGroup" data-path="${path}">Add group</button>`:''}</div></div>`;}
+function condHtml(n,p){return `<div class="cond"><input class="in mono" id="cf-${p}" list="fieldList" data-oni="condField" data-path="${p}" value="${esc(n.field)}" placeholder="field, e.g. payload.notional" aria-label="Field">
+    <select class="in" id="co-${p}" data-onc="condOp" data-path="${p}" aria-label="Comparison" style="width:100%">${Object.keys(OPL).map(o=>opt(o,OPL[o],n.op)).join('')}</select>
+    <input class="in" id="cv-${p}" data-oni="condVal" data-path="${p}" value="${esc(Array.isArray(n.value)?n.value.join(', '):n.value==null?'':n.value)}" placeholder="${n.op==='in'?'values, separated by commas':'value'}" aria-label="Value" ${n.op==='exists'?'hidden':''}>
+    <button class="x" data-act="delCond" data-path="${p}" aria-label="Remove condition">×</button></div>`;}
+function rcptOptions(cur){let h='';for(const k in TEAMS){const t=TEAMS[k];if(t.personal)h+=opt(t.owner,t.oncall,cur);else h+=opt('oncall:'+k,t.name+' on-call person (now '+t.oncall+')',cur)+opt('team:'+k,t.name+' team',cur);}return h;}
+function chBoxes(i,key,sel){return CHS.map(c=>`<label class="chk"><input type="checkbox" id="nt-${key}-${i}-${c}" data-onc="${key==='ch'?'ntCh':'ntElse'}" data-i="${i}" data-ch="${c}" ${sel.includes(c)?'checked':''}> ${CH[c]}</label>`).join('');}
+function viewEditor(){const d=S.draft;const src=(kids(d.when).find(k=>k.field==='@source'&&k.op==='eq')||{}).value||'';
+  const sources=[...new Set(S.events.map(e=>e.source).concat(Object.keys(SAMPLES).map(k=>SAMPLES[k].source)))];
+  return `<div class="row"><div class="grow"><button class="btn link" data-act="cancelEdit">← All rules</button><h1>${S.draftNew?'New rule':'Edit rule'}</h1></div>
+      <button class="btn" data-act="cancelEdit">Discard</button><button class="btn pri" data-act="saveRule" ${canEdit()?'':'disabled'}>Save rule</button></div>
+    ${canEdit()?'':'<div class="banner info">Responders can look but not save. <button class="btn link" data-act="becomeEditor">Switch to Rule editor</button></div>'}
+    ${S.draftAI?'<div class="banner"><b>AI draft — review before saving.</b> Check every card and the matches on the right. Nothing is live until you save.</div>':''}
+    <datalist id="fieldList">${['@type','@severity','@service','@source','@timestamp'].concat(Object.keys(S.fields).sort()).map(f=>`<option value="${esc(f)}"></option>`).join('')}</datalist>
+    <div class="ed-grid"><div class="ed-form">
+      <section class="card"><h2>Describe the rule in a sentence</h2>
+        <div class="row"><input class="in grow" id="nlText" data-oni="nlText" value="${esc(S.nlText)}" placeholder="e.g. Email the Rates team when a large trade is rejected" aria-label="Describe the rule"><button class="btn" data-act="nlDraft">Draft with AI</button></div>
+        <div class="stack" style="gap:4px"><span class="note">This prototype understands these three examples:</span>${CANNED.map((c,i)=>`<button class="btn link" style="text-align:left;white-space:normal" data-act="nlPick" data-i="${i}">${esc(c.text)}</button>`).join('')}</div></section>
+      <section class="card wcard"><div class="wkey">When</div><div class="stack">
+        <div class="two"><label class="field"><span>Rule name</span><input class="in" id="dName" data-oni="dName" value="${esc(d.name)}" placeholder="e.g. Large rejected trades"></label>
+          <label class="field"><span>Owned by</span><select class="in" id="dOwner" data-onc="dOwner" style="width:100%">${Object.keys(TEAMS).map(k=>opt(TEAMS[k].owner,TEAMS[k].name,d.owner)).join('')}</select></label></div>
+        <label class="field"><span>An event arrives from</span><select class="in" id="dSource" data-onc="dSource" style="width:100%">${opt('','any source',src)}${sources.map(s=>opt(s,s,src)).join('')}</select></label></div></section>
+      <section class="card wcard"><div class="wkey">If</div><div class="stack">${groupHtml(d.when,'')}</div></section>
+      <section class="card wcard"><div class="wkey">Then</div><div class="stack">
+        ${d.notify.map((n,i)=>`<div class="ntf"><div class="row"><label class="field grow"><span>Tell</span><select class="in" id="nt-to-${i}" data-onc="ntTo" data-i="${i}" style="width:100%">${rcptOptions(n.to)}</select></label><button class="btn sm" data-act="delNt" data-i="${i}">Remove</button></div>
+          <fieldset><div class="row"><span class="note">by</span>${chBoxes(i,'ch',n.channels||[])}</div></fieldset>
+          <label class="chk"><input type="checkbox" id="nt-h-${i}" data-onc="ntHours" data-i="${i}" ${n.hours?'checked':''}> Only during certain hours</label>
+          ${n.hours?`<div class="row"><label class="row" style="gap:6px">from <input class="in" type="time" id="nt-hf-${i}" data-onc="ntHf" data-i="${i}" value="${esc(n.hours.from)}" style="width:auto"></label><label class="row" style="gap:6px">to <input class="in" type="time" id="nt-ht-${i}" data-onc="ntHt" data-i="${i}" value="${esc(n.hours.to)}" style="width:auto"></label><span class="note">${esc(n.hours.tz)}</span></div>
+            <fieldset><div class="row"><span class="note">outside those hours, use</span>${chBoxes(i,'el',n.else||[])}</div></fieldset>`:''}</div>`).join('')}
+        <div><button class="btn sm" data-act="addNt">Add someone else</button></div>
+        <div class="two"><label class="field"><span>Count repeats on one alert when these fields are the same</span><input class="in mono" id="dGrpBy" data-oni="dGrpBy" list="fieldList" value="${esc(d.group.by.join(', '))}" placeholder="e.g. workflowId"></label>
+          <label class="field"><span>Do not notify again within</span><select class="in" id="dWindow" data-onc="dWindow" style="width:100%">${['1m','5m','15m','1h'].map(w=>opt(w,{'1m':'1 minute','5m':'5 minutes','15m':'15 minutes','1h':'1 hour'}[w],d.group.window)).join('')}</select></label></div>
+        <label class="field"><span>Show this runbook on the alert</span><select class="in" id="dRunbook" data-onc="dRunbook" style="width:100%">${opt('','No runbook',d.runbook||'')}${Object.keys(S.runbooks).map(k=>opt(k,S.runbooks[k].title,d.runbook||'')).join('')}</select></label></div></section>
+      <section class="card wcard"><div class="wkey">Looks like</div><div class="stack">
+        <label class="field"><span>Title. Use {{field}} to insert a value from the event</span><input class="in" id="dTitle" data-oni="dTitle" value="${esc(d.present.title)}" placeholder="e.g. Rejected {{payload.currency}} {{payload.notional}}"></label>
+        <label class="field"><span>Text under the title</span><textarea class="in" id="dBody" data-oni="dBody" rows="2">${esc(d.present.body)}</textarea></label>
+        <div class="two"><label class="field"><span>Severity</span><select class="in" id="dSev" data-onc="dSev" style="width:100%">${opt('critical','Critical',d.severity)}${opt('error','Error',d.severity)}${opt('warning','Warning',d.severity)}${opt('info','Info',d.severity)}${opt('event','Take it from the event',d.severity)}</select></label>
+          <label class="field"><span>Colour in the feed</span><select class="in" id="dColour" data-onc="dColour" style="width:100%">${['red','orange','amber','blue','green','grey'].map(c=>opt(c,cap(c),d.present.colour)).join('')}</select></label></div>
+        <div class="two"><label class="field"><span>Fields to show</span><input class="in mono" id="dFields" data-oni="dFields" value="${esc(d.present.fields.join(', '))}" placeholder="e.g. step, error.message"></label>
+          <label class="field"><span>Of those, highlight</span><input class="in mono" id="dHi" data-oni="dHi" value="${esc(d.present.highlight.join(', '))}" placeholder="e.g. error.message"></label></div></div></section>
+    </div><div class="ed-side" id="edSide">${editorSide()}</div></div>`;}
+function jsonPick(o,pre,ind){const sp='  '.repeat(ind+1);return '{\n'+Object.keys(o).map(k=>{const p=pre?pre+'.'+k:k,v=o[k];
+    if(v&&typeof v==='object'&&!Array.isArray(v))return sp+'"'+esc(k)+'": '+jsonPick(v,p,ind+1);
+    return sp+`<button class="jf" data-act="pickField" data-path="${esc(p)}" title="Add a condition on ${esc(p)}">"${esc(k)}": ${esc(JSON.stringify(v))}</button>`;}).join(',\n')+'\n'+'  '.repeat(ind)+'}';}
+function previewAlert(d,ev){const sev=d.severity==='event'?(sevName(ev.attrs.severity)||'warning'):d.severity;
+  return {code:'4821',severity:sev,colour:d.present.colour,title:tpl(d.present.title,ev)||d.name||'(no title yet)',body:tpl(d.present.body,ev),count:1,
+    fields:d.present.fields.map(p=>({path:p,value:getField(ev,p),hi:d.present.highlight.includes(p)})),runbook:d.runbook,event:ev};}
+function emailHtml(a,to,live){const rb=a.runbook&&S.runbooks[a.runbook];
+  return `<div class="note">To: ${esc(to)}</div><b style="overflow-wrap:anywhere">[${SEVS[a.severity].label.toUpperCase()}] ${esc(a.title)}</b>${a.body?`<p style="overflow-wrap:anywhere">${esc(a.body)}</p>`:''}
+    ${a.fields.length?`<dl class="kv">${a.fields.map(f=>`<dt>${esc(flabel(f.path))}</dt><dd class="${f.hi?'hi':''}">${f.value===undefined?'⟨missing⟩':esc(vfmt(f.value))}</dd>`).join('')}</dl>`:''}
+    ${rb?`<div><span class="lab">What to do next: ${esc(rb.title)}</span><ol style="list-style:decimal;padding-left:20px">${rb.steps.map(s=>`<li style="overflow-wrap:anywhere">${s.condition?'If '+esc(s.condition)+': ':''}${esc(tpl(s.text,a.event))}${needsApproval(s)?' <span class="badge ap">needs approval</span>':''}</li>`).join('')}</ol></div>`:''}
+    ${live?`<div><button class="btn sm pri" data-act="gotoAlert" data-id="${a.id}">Open in Herald</button></div>`:''}`;}
+function editorSide(){const d=S.draft;const evs=S.events.slice(0,50);const res=evs.map(e=>({e:e,tr:evalNode(d.when,e)}));const n=res.filter(x=>x.tr.ok).length;
+  const sample=evs.find(e=>e.id===S.edSample)||evs[0];const none=!kids(d.when).length;
+  let prev='<p class="muted">Send an event from the Simulate menu to see previews.</p>';
+  if(sample){const a=previewAlert(d,sample);const to=d.notify[0]?rcpt(d.notify[0].to).label:'(nobody yet)';const sms=smsText(a);
+    prev=`<div class="prev"><span class="lab">In the Herald feed</span><div class="row top-al c-${a.colour}"><div class="tile" aria-hidden="true">${SEVS[a.severity].g}</div><div class="stack grow" style="gap:4px"><div>${sevTag(a.severity)}</div><b style="overflow-wrap:anywhere">${esc(a.title)}</b>${a.body?`<span class="muted" style="overflow-wrap:anywhere">${esc(a.body)}</span>`:''}</div></div></div>
+      <div class="prev"><span class="lab">Email</span>${emailHtml(a,to,false)}</div>
+      <div class="prev"><div class="row"><span class="lab grow">SMS</span><span class="note num">${sms.length} of 160 characters</span></div><div class="smsb">${esc(sms)}</div></div>
+      <div class="prev"><span class="lab">Phone call, read aloud</span><p style="overflow-wrap:anywhere">“${esc(voiceText(a,to))}”</p></div>`;}
+  return `<section class="card"><span class="lab">In plain words</span><p class="sentence">${esc(ruleSentence(d))}</p>${none?'<div class="banner">With no conditions, this rule matches every event.</div>':''}</section>
+    <section class="card"><div class="row"><h2 class="grow">Sample event</h2><select class="in" id="edSample" data-onc="edSample" aria-label="Choose a sample event" style="max-width:100%">${evs.map(e=>opt(e.id,clock(e.at)+' · '+evLabel(e),sample&&sample.id)).join('')}</select></div>
+      <p class="note">Click any field to add it as a condition.</p>${sample?`<pre>${jsonPick(sample.raw,'',0)}</pre>`:'<p class="muted">No events yet.</p>'}</section>
+    <section class="card"><h2>Matches ${n} of the last ${evs.length} events</h2><ul class="match" style="max-height:230px;overflow-y:auto">${res.slice(0,14).map(x=>`<li><span class="tick ${x.tr.ok?'y':'n'}">${x.tr.ok?'✓':'✗'}</span><span style="overflow-wrap:anywhere"><b>${esc(evLabel(x.e))}</b> <span class="muted num">${clock(x.e.at)}</span>${x.tr.ok?'':`<br><span class="muted">${esc(firstFail(x.tr))}</span>`}</span></li>`).join('')}</ul></section>
+    <section class="card"><h2>How it will look</h2>${prev}</section>`;}
+
+/* ---- runbooks ---- */
+function rbStepsHtml(steps){return `<ol>${steps.map((s,i)=>`<li class="rstep"><span class="note num">${i+1}.</span><div class="stack" style="gap:4px"><span style="overflow-wrap:anywhere">${varHi(s.text)}</span>
+    <div class="row" style="gap:5px"><span class="badge">${{check:'Check',action:'Action',manual:'By hand',wait:'Wait'}[s.kind]}</span>${s.action&&s.kind!=='wait'?`<span class="badge mono">${esc(s.action)}</span>`:''}${approvalBadge(s)}</div>
+    ${s.condition?`<span class="note">Only if: ${esc(s.condition)}</span>`:''}${Object.keys(s.params||{}).length?`<span class="note mono" style="overflow-wrap:anywhere">${varHi(Object.keys(s.params).map(k=>k+': '+s.params[k]).join(', '))}</span>`:''}</div></li>`).join('')}</ol>`;}
+function viewRunbooks(){
+  return `<div><h1>Runbooks</h1><p class="muted">Paste instructions in whatever shape the team already has. Herald keeps the original and turns it into steps that can be ticked off, run, or sent for approval.</p></div>
+    ${Object.keys(S.runbooks).map(k=>{const rb=S.runbooks[k];const used=S.rules.filter(r=>r.runbook===k).map(r=>r.name);
+      return `<section class="card"><div class="row"><h2 class="grow">${esc(rb.title)}</h2><span class="badge">${esc(rb.format)}</span>
+          ${rb.parsedBy==='ai'?(rb.reviewedBy?`<span class="badge ok">AI draft, reviewed by ${esc(rb.reviewedBy)}</span>`:'<span class="badge ai">AI draft, needs review</span>'):'<span class="badge ok">Read by parser</span>'}</div>
+        <p class="note">Used by: ${used.length?esc(used.join(', ')):'no rule yet'}${rb.reviewedBy&&rb.parsedBy!=='ai'?' · reviewed by '+esc(rb.reviewedBy):''}</p>
+        <div class="rb-grid"><div class="stack"><span class="lab">As the team wrote it</span><pre class="wrap">${esc(rb.source)}</pre></div>
+          <div class="stack"><span class="lab">As steps</span>${rbStepsHtml(rb.steps)}
+            ${rb.parsedBy==='ai'&&!rb.reviewedBy?`<div class="row"><button class="btn sm pri" data-act="reviewRb" data-id="${k}" ${canEdit()?'':'disabled'}>Mark as reviewed</button>${canEdit()?'':'<span class="note">Needs a Rule editor or Team lead.</span>'}</div>`:''}</div></div></section>`;}).join('')}
+    <section class="card"><h2>Paste any runbook</h2><p class="note">Numbered lines, bullets, a checklist or plain sentences. This splitter uses fixed rules only, no AI.</p>
+      <textarea class="in" id="pasteText" data-oni="pasteText" rows="5" placeholder="1. Check the queue depth.&#10;2. If it is over 10,000: restart the consumer (needs approval).&#10;3. Wait 5 minutes and check again.">${esc(S.pasteText)}</textarea>
+      <div class="row"><button class="btn pri" data-act="parsePaste">Split into steps</button><button class="btn link" data-act="pasteExample">Use an example</button></div>
+      ${S.pasteSteps?(S.pasteSteps.length?`<div class="stack"><div class="row"><span class="lab grow">As steps</span><span class="badge ok">Read by parser</span><span class="badge">Not saved</span></div>${rbStepsHtml(S.pasteSteps)}</div>`:'<div class="banner">No steps found. Type or paste some instructions first.</div>'):''}</section>`;}
+
+/* ---- deliveries ---- */
+function phonePeople(){const s=new Set([T().oncall,T().lead]);Object.keys(S.threads).forEach(k=>s.add(k));S.calls.forEach(c=>s.add(c.to));return [...s];}
+function viewDeliveries(){const people=phonePeople();if(!people.includes(S.phone))S.phone=people[0];const me=S.phone;
+  const th=S.threads[me]||[];const calls=S.calls.filter(c=>c.to===me);const ring=calls.find(c=>c.state==='ringing');
+  const codes=[...new Set((th.filter(m=>m.dir==='in').slice(-3).map(m=>m.text).join(' ').match(/\b(?:ACK|YES)\s\d{4}\b/g)||[]))].slice(-2);
+  const sel=S.emails.find(m=>m.id===S.emailSel)||S.emails[0];const waiting=S.notifs.filter(n=>n.status==='retrying'||n.status==='parked').length;
+  return `<div><h1>Deliveries</h1><p class="muted">Stand-ins for the outside world: a phone, a mailbox and the delivery log. Replies typed on the phone act on the real alert.</p></div>
+    ${S.smsDown?`<div class="banner"><b>SMS gateway is down.</b> ${waiting} message${waiting===1?' is':'s are'} waiting and will be sent when it returns. Nothing is dropped. <button class="btn link" data-act="smsToggle">Bring it back</button></div>`:''}
+    <div class="dl-grid"><section class="stack"><h2>Phone</h2>
+        <div class="ptabs" role="group" aria-label="Whose phone">${people.map(p=>`<button class="ptab" data-act="phoneTab" data-who="${esc(p)}" aria-pressed="${p===me}">${esc(p)}</button>`).join('')}</div>
+        <div class="phone"><div class="row"><b class="grow">${esc(me)}</b><span class="note">Messages from Herald</span></div>
+          ${ring?(()=>{const a=alertById(ring.alert);return `<div class="call"><div class="row"><span class="live"><span class="dot pulse"></span>Incoming call from Herald</span></div><p style="overflow-wrap:anywhere">“${esc(voiceText(a,me))}”</p>
+            <div class="keys">${['1','2','3','4','5','6','7','8','9','*','0','#'].map(d=>`<button class="key ${d==='1'||d==='2'?'act':''}" data-act="key" data-id="${ring.id}" data-d="${d}"><b>${d}</b><small>${d==='1'?'acknowledge':d==='2'?'team lead':''}</small></button>`).join('')}</div>
+            <button class="btn sm warn" data-act="key" data-id="${ring.id}" data-d="x">Hang up</button></div>`;})():''}
+          <div class="thread" id="thread">${calls.filter(c=>c.state!=='ringing').slice().reverse().map(c=>`<div class="bub in"><i>${c.state==='missed'?'Call from Herald, not answered':'Call from Herald ended'}${c.note?': '+esc(c.note):''}</i><small class="num">${clock(c.at)}</small></div>`).join('')}
+            ${th.map(m=>`<div class="bub ${m.dir}">${esc(m.text)}<small class="num">${clock(m.at)}</small></div>`).join('')||(calls.length?'':'<p class="muted" style="text-align:center;margin:auto">No messages yet.</p>')}</div>
+          ${codes.length?`<div class="row" style="gap:5px"><span class="note">Quick reply:</span>${codes.map(c=>`<button class="btn sm" data-act="smsQuick" data-t="${c}">${c}</button>`).join('')}</div>`:''}
+          <div class="row" style="flex-wrap:nowrap"><input class="in" id="smsReply" data-oni="smsDraft" value="${esc(S.smsDraft)}" placeholder="Reply, e.g. ACK 4821" aria-label="Reply by SMS"><button class="btn pri" data-act="smsSend">Send</button></div></div></section>
+      <section class="stack"><h2>Mailbox</h2><div class="card" style="padding:0;gap:0">
+        ${S.emails.length?`<div class="mail">${S.emails.slice(0,6).map(m=>{const a=alertById(m.alert);return `<button class="mrow" data-act="mailSel" data-id="${m.id}" aria-pressed="${sel&&sel.id===m.id}"><b style="overflow-wrap:anywhere">${esc(a.title)}</b><span class="note num">${clock(m.at)}</span><span class="note">To ${esc(m.to)}</span></button>`;}).join('')}</div>
+          <div class="mbody">${emailHtml(alertById(sel.alert),sel.to,true)}</div>`:'<p class="muted" style="padding:16px">No email sent yet. The Rates rule sends one for large rejected trades.</p>'}</div></section></div>
+    <section class="card"><div class="row"><h2 class="grow">Delivery log</h2><span class="note">Latency is measured from the event arriving to the channel accepting the message.</span></div>
+      <div class="scroll-x"><table><thead><tr><th>Time</th><th>Alert</th><th>To</th><th>Channel</th><th>Attempts</th><th>Status</th><th>Latency</th></tr></thead><tbody>
+        ${S.notifs.slice(0,40).map(n=>{const a=alertById(n.alert);return `<tr><td class="num">${clock(n.at)}</td><td style="min-width:180px">${esc(a.title)}</td><td>${esc(n.to)}</td><td>${CH[n.channel]}${n.note?`<div class="note">${esc(n.note)}</div>`:''}</td><td class="num">${n.attempts}</td>
+          <td>${chipHtml(n).replace(/>[^<]*·[^<]*· /,'>')}</td><td class="num">${n.latency!=null?nf(Math.round(n.latency))+' ms':'—'}</td></tr>`;}).join('')}</tbody></table></div></section>`;}
+
+/* ---- preferences, audit ---- */
+function viewPreferences(){const t=T();
+  return `<div><h1>Preferences</h1><p class="muted">How ${esc(t.personal?'Anna':'the '+t.name+' team')} wants to be reached. Rules that notify “by preference” follow this table.</p></div>
+    <div class="grid2"><section class="card"><h2>On call now</h2><p><b>${esc(t.oncall)}</b></p><dl class="kv">${t.rota.map(r=>`<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join('')}</dl></section>
+      <section class="card"><h2>Working hours</h2><div class="row"><label class="row" style="gap:6px">from <input class="in" type="time" id="phf" data-onc="prefHours" data-k="0" value="${t.hours[0]}" style="width:auto"></label><label class="row" style="gap:6px">to <input class="in" type="time" id="pht" data-onc="prefHours" data-k="1" value="${t.hours[1]}" style="width:auto"></label></div>
+        <p class="note">Time zone ${esc(t.tz)}. Outside these hours, critical alerts still reach the on-call person. Everything else waits in email.</p></section></div>
+    <section class="card"><h2>Channel by severity</h2><div class="scroll-x"><table><thead><tr><th>Severity</th>${CHS.map(c=>`<th>${CH[c]}</th>`).join('')}</tr></thead><tbody>
+      ${['critical','error','warning','info'].map(s=>`<tr><td>${sevTag(s)}</td>${CHS.map(c=>`<td><input type="checkbox" id="pf-${s}-${c}" data-onc="pref" data-s="${s}" data-ch="${c}" aria-label="${SEVS[s].label} by ${CH[c]}" ${t.prefs[s].includes(c)?'checked':''}></td>`).join('')}</tr>`).join('')}</tbody></table></div></section>
+    <section class="card"><h2>People</h2><dl class="kv">${t.members.map(m=>`<dt>${esc(m[0])}</dt><dd>${esc(m[1])}</dd>`).join('')}</dl></section>`;}
+function viewAudit(){
+  return `<div><h1>Audit trail</h1><p class="muted">Every acknowledgement, resolution, runbook step, approval and rule change, with who did it. Entries can only be added. Each one carries a fingerprint of the entry before it, so a later edit would show.</p></div>
+    <section class="card"><div class="scroll-x"><table><thead><tr><th>Time</th><th>Who</th><th>What</th><th>On</th><th>Fingerprint</th></tr></thead><tbody>
+      ${S.audit.map(e=>`<tr><td class="num">${clock(e.at)}</td><td style="white-space:nowrap">${esc(e.actor)}</td><td>${esc(e.action)}${e.detail?`<div class="note">${esc(e.detail)}</div>`:''}</td><td style="min-width:200px">${esc(e.target)}</td><td class="mono">${e.hash}</td></tr>`).join('')}</tbody></table></div></section>`;}
+
+/* ---- connect a source ---- */
+function snippet(src){const body=JSON.stringify(SAMPLES.unseen.raw);
+  if(src==='kafka')return 'sources:\n  - id: scheduler-events\n    type: kafka\n    brokers: broker:9092\n    topic: scheduler.events\n    group: herald\n# then publish a test message:\necho \''+body+'\' | kcat -P -b broker:9092 -t scheduler.events';
+  if(src==='logfile')return 'sources:\n  - id: scheduler-log\n    type: logfile\n    path: /var/log/scheduler/*.log\n    format: json   # one JSON object per line\n# then append a test line:\necho \''+body+'\' >> /var/log/scheduler/eod.log';
+  return 'curl -X POST https://herald.example/ingest/webhook/scheduler \\\n  -H "X-Herald-Token: $HERALD_SOURCE_TOKEN" \\\n  -H "Content-Type: application/json" \\\n  -d \''+body+'\'';}
+function viewConnect(){const o=S.ob;const ev=o.eventId&&S.events.find(e=>e.id===o.eventId);const done=!!o.alertAt;
+  const clockTxt=o.t0?mmss((o.alertAt||Date.now())-o.t0):'00:00';const sug=batchRule(T().owner);
+  const stp=(n,ok,html)=>`<section class="card ob"><div class="obn ${ok?'done':''}" aria-hidden="true">${ok?'✓':n}</div><div class="stack">${html}</div></section>`;
+  let h=`<div class="row"><div class="grow"><h1>Connect a source</h1><p class="muted">From nothing to a first alert for ${esc(T().name)}. The event below uses a shape Herald has never seen.</p></div>
+      <div class="stack" style="gap:2px;align-items:flex-end"><span class="lab">${done?'Time to first alert':'Elapsed'}</span><span class="clockbox" id="obClock">${clockTxt}</span></div></div>`;
+  h+=stp(1,!!o.src,`<h2>Where do the events come from?</h2><div class="row">${[['webhook','HTTP webhook'],['kafka','Message broker (Kafka)'],['logfile','Log file']].map(s=>`<button class="btn" data-act="obSrc" data-src="${s[0]}" aria-pressed="${o.src===s[0]}" ${o.src===s[0]?'style="border-color:var(--accent);color:var(--accent)"':''}>${s[1]}</button>`).join('')}</div>`);
+  if(o.src)h+=stp(2,!!o.gotAt,`<h2>Send one event</h2><pre id="snip">${esc(snippet(o.src))}</pre>
+      <div class="row"><button class="btn sm" data-act="copy" data-src="snip">Copy</button>${o.gotAt?`<span class="wait got"><span class="dot"></span>First event received after ${mmss(o.gotAt-o.t0)}</span>`:`<span class="wait"><span class="dot pulse"></span>Waiting for the first event…</span><button class="btn pri" data-act="obSend">Send sample event</button>`}</div>
+      ${o.gotAt?'':'<p class="note">The button stands in for running the command above.</p>'}`);
+  if(ev){const flat=ev.flat;const used=p=>Object.keys(ev.paths).filter(k=>ev.paths[k]===p).map(cap).join(', ');
+    h+=stp(3,true,`<h2>What Herald found in it</h2><div class="scroll-x"><table><thead><tr><th>Field</th><th>Kind</th><th>Example</th><th>Recognised as</th></tr></thead><tbody>
+      ${Object.keys(flat).map(p=>`<tr><td class="mono">${esc(p)}</td><td>${typeOf(flat[p])}</td><td style="overflow-wrap:anywhere">${esc(vfmt(flat[p]))}</td><td>${used(p)||'<span class="muted">—</span>'}</td></tr>`).join('')}</tbody></table></div>
+      <p class="note">${ev.attrs.severity===undefined?'No severity field was found, so the suggested rule sets one. ':''}Every field above can be used in a rule straight away.</p>`);
+    if(o.preMatched)h+=stp(4,true,`<h2>A rule already matched</h2><p>An existing rule recognised this event, so the first alert is already in the feed.</p>`);
+    else h+=stp(4,o.accepted,`<h2>Suggested rule</h2><p class="sentence">${esc(ruleSentence(sug))}</p>
+      ${o.accepted?`<div class="row"><span class="wait got"><span class="dot"></span>Rule saved</span>${done?'':'<button class="btn pri" data-act="obSend">Send the event again</button>'}</div>`
+        :`<div class="row"><button class="btn pri" data-act="obAccept" ${canEdit()?'':'disabled'}>Accept this rule</button><button class="btn" data-act="obEdit">Change it first</button>${canEdit()?'':'<span class="note">Saving rules needs a Rule editor or Team lead. <button class="btn link" data-act="becomeEditor">Switch</button></span>'}</div>`}`);}
+  if(done)h+=stp(5,true,`<h2>First alert after ${mmss(o.alertAt-o.t0)}</h2><p>${esc(T().oncall)} has been ${T().personal?'texted':'called and texted'}, and the alert is in the feed.</p><div class="row"><button class="btn pri" data-act="nav" data-view="feed">See it in the live feed</button><button class="btn" data-act="obReset">Start over</button></div>`);
+  else if(o.src)h+=`<div><button class="btn link" data-act="obReset">Start over</button></div>`;
+  return h;}
+
+/* ---- chrome ---- */
+function navHtml(){const open=S.alerts.filter(a=>a.owner===T().owner&&a.status==='firing').length;const wait=S.notifs.filter(n=>n.status==='retrying'||n.status==='parked').length;
+  return [['feed','Live feed',open||''],['rules','Rules',''],['runbooks','Runbooks',''],['deliveries','Deliveries',wait?wait+' waiting':''],['preferences','Preferences',''],['audit','Audit trail',''],['connect','Connect a source','']]
+    .map(i=>`<button class="navb" data-act="nav" data-view="${i[0]}" ${S.view===i[0]?'aria-current="page"':''}><span>${i[1]}</span>${i[2]!==''?`<span class="nb">${i[2]}</span>`:''}</button>`).join('');}
+function simHtml(){const it=(k,t,d)=>`<button class="mi" data-act="sim" data-k="${k}"><span>${t}</span><small>${d}</small></button>`;
+  const tg=(act,on,t,d)=>`<button class="mi tog" role="switch" aria-checked="${on}" data-act="${act}"><span class="sw" aria-hidden="true"></span><span><span>${t}</span><small>${d}</small></span></button>`;
+  return `<div class="mh lab">Send an event</div>
+    ${it('workflow','Workflow failed','Kafka. Settlements: phone and SMS to the on-call person')}
+    ${it('metric','High error rate on payments-api','Webhook. Anna: SMS by day, email by night')}
+    ${it('resolved','Metric back to normal','Closes the payments-api alert by itself')}
+    ${it('trade','Trade rejected, 25,000,000 EUR','Kafka, different envelope. Rates: email')}
+    ${it('tradeSmall','Trade rejected, 2,000,000 EUR','Under the limit, so it must not alert')}
+    ${it('pricing','Pricing warning, one log line','Log file. Pricing: feed only')}
+    ${it('burst','Pricing warning burst ×500','Must become one alert with a counter')}
+    ${it('unseen','Event in a shape never seen before','A batch job failure no rule knows yet')}
+    <div class="mh lab">Conditions</div>
+    ${tg('smsToggle',S.smsDown,'SMS gateway down','SMS deliveries retry, then go out when it returns')}
+    ${tg('nightToggle',S.night,'Night-time (22:30)','Now '+(S.night?'22:30':'10:15')+'. Anna’s rule uses SMS only 08:00 to 20:00')}`;}
+function renderToasts(){$('toasts').innerHTML=S.toasts.map(t=>`<div class="toast" role="status"><span>${esc(t.text)}</span>${t.btn?`<button data-act="${t.btn.act}" data-id="${esc(t.btn.id)}">${esc(t.btn.label)}</button>`:''}</div>`).join('');}
+const VIEWS={feed:viewFeed,rules:viewRules,runbooks:viewRunbooks,deliveries:viewDeliveries,preferences:viewPreferences,audit:viewAudit,connect:viewConnect};
+function render(){
+  const a=document.activeElement,fid=a&&a.id;let ss=null,se=null;try{ss=a.selectionStart;se=a.selectionEnd;}catch(e){}
+  $('teamSel').value=S.team;$('roleSel').value=S.role;
+  $('nav').innerHTML=navHtml();$('simMenu').innerHTML=simHtml();$('simMenu').hidden=!S.simOpen;$('simBtn').setAttribute('aria-expanded',String(S.simOpen));
+  $('main').innerHTML=(VIEWS[S.view]||viewFeed)();
+  let d=null;if(S.drawer){d=S.drawer.kind==='alert'?alertById(S.drawer.id):S.events.find(e=>e.id===S.drawer.id);if(!d)S.drawer=null;}
+  $('drawer').hidden=!d;$('scrim').hidden=!d;
+  if(d){if(S.drawer.kind==='alert')drawerAlert(d);else drawerEvent(d);}
+  renderToasts();
+  const th=$('thread');if(th)th.scrollTop=th.scrollHeight;
+  if(fid){const n=$(fid);if(n&&n!==document.activeElement){try{n.focus();if(ss!=null&&n.setSelectionRange)n.setSelectionRange(ss,se);}catch(e){}}}
+}
+function refreshSide(){const s=$('edSide');if(s&&S.draft)s.innerHTML=editorSide();}
+function go(view){S.view=view;if(view!=='rules')S.draft=null;try{if(location.hash!=='#'+view)location.hash=view;}catch(e){}}
+
+/* ============ actions ============ */
+const ACT={
+  nav(el){go(el.dataset.view);if(el.dataset.view==='rules')S.draft=null;window.scrollTo(0,0);},
+  simToggle(){S.simOpen=!S.simOpen;},
+  sim(el){S.simOpen=false;sim(el.dataset.k);},
+  smsToggle(){S.smsDown=!S.smsDown;if(!S.smsDown){smsBack();toast('SMS gateway is back. Waiting messages were sent.');}else toast('SMS gateway is down. New SMS alerts will retry and wait.');},
+  nightToggle(){S.night=!S.night;},
+  filter(el){S.f[el.dataset.k]=el.dataset.v;},
+  filterReset(){S.f={status:'all',sev:'all'};},
+  testEvent(){sim({settlements:'workflow',pricing:'pricing',rates:'trade',anna:'metric'}[S.team]);},
+  openAlert(el){S.drawer={kind:'alert',id:el.dataset.id};},
+  gotoAlert(el){const a=alertById(el.dataset.id);if(!a)return;S.team=teamKey(a.owner);go('feed');if(a.status==='resolved'&&S.f.status!=='all')S.f.status='all';S.drawer={kind:'alert',id:a.id};},
+  openEvent(el){S.drawer={kind:'event',id:el.dataset.id};},
+  closeDrawer(){S.drawer=null;},
+  ack(el){const a=alertById(el.dataset.id);if(a)ackAlert(a,actor(),'in Herald');},
+  resolve(el){const a=alertById(el.dataset.id);if(a)resolveAlert(a,actor(),'marked resolved in Herald');},
+  runStep(el){const a=alertById(el.dataset.id);if(a)runStep(a,+el.dataset.i);},
+  approve(el){const ap=S.approvals.find(x=>x.id===el.dataset.id);if(!ap||ap.status!=='pending')return;const b=approvalBlock(ap,actor(),true);if(b){toast(b);return;}decide(ap,true,actor(),'in Herald');},
+  reject(el){const ap=S.approvals.find(x=>x.id===el.dataset.id);if(!ap||ap.status!=='pending')return;
+    if(actor()!==ap.requestedBy&&approvalBlock(ap,actor(),true)){toast('Only a team lead can reject this step.');return;}decide(ap,false,actor(),'in Herald');},
+  openPhone(el){S.phone=el.dataset.who;S.drawer=null;go('deliveries');},
+  newRule(){startEdit(blankRule(),true,false);},
+  editRule(el){const r=ruleById(el.dataset.id);if(r)startEdit(clone(r),false,false);},
+  ruleFromEvent(el){const ev=S.events.find(e=>e.id===el.dataset.id);const d=blankRule();startEdit(d,true,false,ev&&ev.id);go('rules');S.draft=d;},
+  cancelEdit(){S.draft=null;},
+  becomeEditor(){S.role='editor';},
+  saveRule(){const d=S.draft;if(!canEdit())return;if(!d.name.trim()){toast('Give the rule a name before saving.');const n=$('dName');if(n)n.focus();return;}
+    d.version=(d.version||0)+1;
+    if(d.id){const i=S.rules.findIndex(r=>r.id===d.id);S.rules[i]=d;}else{d.id='r-'+(++seq);d.hits=0;S.rules.push(d);}
+    audit(actor(),S.draftNew?'Created rule':'Changed rule',d.name+' (v'+d.version+')',S.draftAI?'started from an AI draft':'');
+    S.draft=null;toast('Rule saved. It applies to the next event.');},
+  addCond(el){kids(nodeAt(el.dataset.path)).push({field:'',op:'eq',value:''});},
+  addGroup(el){kids(nodeAt(el.dataset.path)).push({any:[{field:'',op:'eq',value:''}]});},
+  delCond(el){const p=parentOf(el.dataset.path);kids(p.parent).splice(p.idx,1);},
+  pickField(el){const path=el.dataset.path,ev=S.events.find(e=>e.id===S.edSample)||S.events[0];const v=ev?ev.flat[path]:'';
+    const root=S.draft.when;const target=root.all?root.all:kids(root);target.push({field:path,op:typeof v==='number'?'gte':'eq',value:Array.isArray(v)?v.join(', '):v});},
+  addNt(){S.draft.notify.push({to:S.draft.owner.indexOf('person:')===0?S.draft.owner:'team:'+teamKey(S.draft.owner),channels:['email']});},
+  delNt(el){S.draft.notify.splice(+el.dataset.i,1);},
+  nlPick(el){const c=CANNED[+el.dataset.i];S.nlText=c.text;startEdit(c.make(),true,true);},
+  nlDraft(){const t=S.nlText.toLowerCase();let best=null,bs=0;CANNED.forEach(c=>{const s=c.keys.filter(k=>t.indexOf(k)>=0).length;if(s>bs){bs=s;best=c;}});
+    if(!best){toast('This prototype only understands the three example sentences under the box.');return;}startEdit(best.make(),true,true);},
+  reviewRb(el){const rb=S.runbooks[el.dataset.id];if(!rb||!canEdit())return;rb.reviewedBy=actor();audit(actor(),'Reviewed runbook',rb.title,'AI-drafted steps accepted');},
+  parsePaste(){S.pasteSteps=parseRunbook(S.pasteText);},
+  pasteExample(){S.pasteText='When the reconciliation job is killed, check the memory graph for the host. If memory was at the limit: restart the job with the large profile (needs approval from the team lead). Wait 10 minutes, and if it fails again, escalate to the platform team.';S.pasteSteps=parseRunbook(S.pasteText);},
+  phoneTab(el){S.phone=el.dataset.who;S.smsDraft='';},
+  smsSend(){const t=S.smsDraft.trim();if(!t)return;S.smsDraft='';smsReply(S.phone,t);},
+  smsQuick(el){smsReply(S.phone,el.dataset.t);},
+  key(el){const c=S.calls.find(x=>x.id===el.dataset.id);if(!c||c.state!=='ringing')return;const a=alertById(c.alert),d=el.dataset.d;
+    if(d==='1'){c.state='ended';c.note='pressed 1, acknowledged';ackAlert(a,c.to,'phone keypad');}
+    else if(d==='2'){c.state='ended';c.note='pressed 2, passed to the team lead';const lead=TEAMS[teamKey(a.owner)].lead;
+      pushSms(lead,'in','Passed to you by '+c.to+': '+smsText(a));tl(a,Date.now(),c.to+' passed the alert to '+lead+' from the phone keypad');audit(c.to,'Escalated alert',a.title,'phone keypad, to '+lead);}
+    else if(d==='x'){c.state='ended';c.note='hung up';tl(a,Date.now(),c.to+' hung up without acknowledging');}},
+  mailSel(el){S.emailSel=el.dataset.id;},
+  copy(el){const n=$(el.dataset.src);if(!n)return;const txt=n.textContent;const fb=()=>{try{const r=document.createRange();r.selectNodeContents(n);const s=window.getSelection();s.removeAllRanges();s.addRange(r);}catch(e){}toast('Text selected. Press Ctrl or Cmd + C to copy.');};
+    try{navigator.clipboard.writeText(txt).then(()=>toast('Copied.'),fb);}catch(e){fb();}},
+  obSrc(el){const o=S.ob;if(!o.t0)o.t0=Date.now();o.src=el.dataset.src;},
+  obSend(){const o=S.ob;if(!o.t0)o.t0=Date.now();const src={kafka:'kafka:scheduler-events',logfile:'logfile:scheduler'}[o.src]||'webhook:scheduler';
+    const ev=ingest(clone(SAMPLES.unseen.raw),src);if(!o.gotAt){o.gotAt=Date.now();o.eventId=ev.id;}
+    if(ev.results.some(r=>r.alert)){if(!o.accepted)o.preMatched=true;if(!o.alertAt)o.alertAt=Date.now();}},
+  obAccept(){if(!canEdit())return;const r=batchRule(T().owner);r.id='r-'+(++seq);r.version=1;r.hits=0;S.rules.push(r);S.ob.accepted=true;audit(actor(),'Created rule',r.name+' (v1)','accepted from the suggestion when connecting a source');},
+  obEdit(){startEdit(batchRule(T().owner),true,false,S.ob.eventId);},
+  obReset(){S.ob={src:null,t0:null,gotAt:null,eventId:null,accepted:false,alertAt:null,preMatched:false};}
+};
+const ONI={
+  dName(el){S.draft.name=el.value;},
+  dTitle(el){S.draft.present.title=el.value;},
+  dBody(el){S.draft.present.body=el.value;},
+  dFields(el){S.draft.present.fields=list(el.value);},
+  dHi(el){S.draft.present.highlight=list(el.value);},
+  dGrpBy(el){S.draft.group.by=list(el.value);},
+  condField(el){nodeAt(el.dataset.path).field=el.value.trim();},
+  condVal(el){const n=nodeAt(el.dataset.path),v=el.value;
+    if(n.op==='in')n.value=list(v);else if(['gt','gte','lt','lte'].includes(n.op)&&v.trim()!==''&&!isNaN(Number(v.replace(/,/g,''))))n.value=Number(v.replace(/,/g,''));else n.value=v;},
+  nlText(el){S.nlText=el.value;return false;},
+  smsDraft(el){S.smsDraft=el.value;return false;},
+  pasteText(el){S.pasteText=el.value;return false;}
+};
+const ONC={
+  team(el){S.team=el.value;S.drawer=null;S.phone=null;if(S.draft&&S.draftNew&&!S.draft.name)S.draft=null;},
+  role(el){S.role=el.value;},
+  ruleToggle(el){const r=ruleById(el.dataset.id);if(!r||!canEdit())return;r.enabled=el.checked;audit(actor(),el.checked?'Switched rule on':'Switched rule off',r.name);},
+  grpMode(el){const path=el.dataset.path,m=el.value;const n=nodeAt(path);const ks=kids(n);const nn=m==='all'?{all:ks}:m==='any'?{any:ks}:{not:{any:ks}};
+    if(path==='')S.draft.when=nn;else{const p=parentOf(path);kids(p.parent)[p.idx]=nn;}},
+  condOp(el){const n=nodeAt(el.dataset.path);n.op=el.value;if(n.op==='exists')n.value='';else if(n.op==='in'&&!Array.isArray(n.value))n.value=list(n.value);else if(n.op!=='in'&&Array.isArray(n.value))n.value=n.value.join(', ');},
+  dOwner(el){S.draft.owner=el.value;},
+  dSource(el){const root=S.draft.when;let ks=kids(root);const i=ks.findIndex(k=>k.field==='@source'&&k.op==='eq');if(i>=0)ks.splice(i,1);
+    if(el.value){const leaf={field:'@source',op:'eq',value:el.value};if(root.all)root.all.unshift(leaf);else S.draft.when={all:[leaf,root]};}},
+  dSev(el){S.draft.severity=el.value;},
+  dColour(el){S.draft.present.colour=el.value;},
+  dWindow(el){S.draft.group.window=el.value;},
+  dRunbook(el){S.draft.runbook=el.value||null;},
+  ntTo(el){S.draft.notify[+el.dataset.i].to=el.value;},
+  ntCh(el){const n=S.draft.notify[+el.dataset.i],c=el.dataset.ch;n.channels=CHS.filter(x=>x===c?el.checked:(n.channels||[]).includes(x));},
+  ntElse(el){const n=S.draft.notify[+el.dataset.i],c=el.dataset.ch;n.else=CHS.filter(x=>x===c?el.checked:(n.else||[]).includes(x));},
+  ntHours(el){const n=S.draft.notify[+el.dataset.i];if(el.checked){n.hours={from:'08:00',to:'20:00',tz:TEAMS[teamKey(S.draft.owner)].tz};n.else=n.else||['email'];}else{delete n.hours;delete n.else;}},
+  ntHf(el){S.draft.notify[+el.dataset.i].hours.from=el.value;},
+  ntHt(el){S.draft.notify[+el.dataset.i].hours.to=el.value;},
+  edSample(el){S.edSample=el.value;},
+  pref(el){const t=T(),s=el.dataset.s,c=el.dataset.ch;t.prefs[s]=CHS.filter(x=>x===c?el.checked:t.prefs[s].includes(x));audit(actor(),'Changed channel preference',t.name+': '+SEVS[s].label,(t.prefs[s].map(x=>CH[x]).join(', ')||'no channel'));},
+  prefHours(el){const t=T();t.hours[+el.dataset.k]=el.value;audit(actor(),'Changed working hours',t.name,t.hours.join(' to '));}
+};
+
+/* ============ wiring ============ */
+document.addEventListener('click',e=>{
+  const el=e.target.closest?e.target.closest('[data-act]'):null;
+  if(S.simOpen&&!(e.target.closest&&e.target.closest('#simWrap'))){S.simOpen=false;if(!el){render();return;}}
+  if(!el||!ACT[el.dataset.act])return;if(el.disabled)return;
+  ACT[el.dataset.act](el,e);render();
+  if(el.dataset.act==='openAlert'||el.dataset.act==='openEvent'||el.dataset.act==='gotoAlert'){const c=$('drClose');if(c){$('drawerBody').scrollTop=0;try{c.focus();}catch(x){}}}
+});
+document.addEventListener('input',e=>{const el=e.target.closest?e.target.closest('[data-oni]'):null;if(!el||!ONI[el.dataset.oni])return;if(ONI[el.dataset.oni](el)!==false)refreshSide();});
+document.addEventListener('change',e=>{const el=e.target.closest?e.target.closest('[data-onc]'):null;if(!el||!ONC[el.dataset.onc])return;ONC[el.dataset.onc](el);render();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){if(S.simOpen){S.simOpen=false;render();}else if(S.drawer){S.drawer=null;render();}return;}
+  if(e.key!=='Enter')return;const t=e.target;
+  if(t.id==='smsReply'){e.preventDefault();ACT.smsSend();render();}
+  else if(t.id==='nlText'){e.preventDefault();ACT.nlDraft();render();}
+  else if(t.matches&&t.matches('article[data-act]')){e.preventDefault();ACT[t.dataset.act](t);render();}
+});
+window.addEventListener('hashchange',()=>{const v=location.hash.replace('#','');if(VIEWS[v]&&v!==S.view){S.view=v;S.draft=null;render();}});
+setInterval(()=>{const c=$('obClock');if(c&&S.ob.t0&&!S.ob.alertAt)c.textContent=mmss(Date.now()-S.ob.t0);},500);
+
+/* ============ seed a realistic working state ============ */
+(function seed(){const t=Date.now(),m=60000;
+  audit('Elena Fischer','Created rule','Order settlement failures in prod (v1)','',t-190*m);
+  audit('Elena Fischer','Created rule','Pricing engine warnings (v1)','',t-176*m);
+  audit('David Okafor','Created rule','Large rejected rates trades (v1)','',t-150*m);
+  audit('Anna','Created rule','Anything critical from payments-api (v1)','',t-121*m);
+  audit('Marcus Lindqvist','Reviewed runbook','Settlement timeout','',t-95*m);
+  ingest(clone(SAMPLES.metric.raw),SAMPLES.metric.source,{at:t-11*m,seed:true});
+  ingest(clone(SAMPLES.workflow.raw),SAMPLES.workflow.source,{at:t-6*m-20000,seed:true});
+  ingest(clone(SAMPLES.trade.raw),SAMPLES.trade.source,{at:t-4*m-5000,seed:true});
+  let first=null;for(let i=0;i<37;i++){const raw=clone(SAMPLES.pricing.raw);raw.latency_ms=1300+((i*53)%700);const ev=ingest(raw,SAMPLES.pricing.source,{at:t-3*m+i*4200,seed:true,store:i===0});if(!first)first=ev;}
+  first.burstN=37;
+  const v=(function(){try{return location.hash.replace('#','');}catch(e){return '';}})();if(VIEWS[v])S.view=v;
+})();
+window.__herald={S:S,ACT:ACT,ONC:ONC,ONI:ONI,render:render,ingest:ingest,sim:sim,parseRunbook:parseRunbook,ruleSentence:ruleSentence};
+render();
+})();
+</script>

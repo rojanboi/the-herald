@@ -1,0 +1,41 @@
+# Demo directory. Names, addresses and numbers are invented (example.com, reserved UK drama numbers).
+teams:
+  - id: settlements
+    name: Settlements
+    members: [priya, marcus, sam]
+    lead: marcus
+    email: settlements@example.com
+    on_call: {rota: [priya, marcus], start: "2026-11-16", shift_days: 7}
+    preferences: {critical: [phone, sms], error: [sms, email], warning: [email], info: [ui]}
+  - id: pricing
+    name: Pricing
+    members: [tomas, ines, sam]
+    lead: ines
+    email: pricing@example.com
+    on_call: {rota: [tomas, ines], start: "2026-11-16", shift_days: 7}
+  - id: rates
+    name: Rates desk
+    members: [elena, sam]
+    lead: elena
+    email: rates-desk@example.com
+  - id: counterparty-support
+    name: Counterparty support
+    members: [devon]
+    lead: devon
+    email: counterparty-support@example.com
+  - id: loadtest
+    name: Load test
+    members: [loadbot]
+    lead: loadbot
+    email: loadtest@example.com
+
+people:
+  - {id: anna, name: Anna, email: anna@example.com, phone: "+447700900001", tz: Europe/London}
+  - {id: priya, name: Priya N., email: priya@example.com, phone: "+447700900002", tz: Europe/London}
+  - {id: marcus, name: Marcus L., email: marcus@example.com, phone: "+447700900003", tz: Europe/London}
+  - {id: tomas, name: Tomas K., email: tomas@example.com, phone: "+447700900004", tz: Europe/London}
+  - {id: ines, name: Ines R., email: ines@example.com, phone: "+447700900005", tz: Europe/London}
+  - {id: elena, name: Elena V., email: elena@example.com, phone: "+447700900006", tz: Europe/London}
+  - {id: devon, name: Devon A., email: devon@example.com, phone: "+447700900007", tz: Europe/London}
+  - {id: loadbot, name: Load test recipient, email: loadbot@example.com, phone: "+447700900099", tz: UTC}
+  - {id: sam, name: Sam O., email: sam@example.com, phone: "+447700900008", tz: Europe/London}

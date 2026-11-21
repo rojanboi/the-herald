@@ -1,0 +1,21 @@
+# Team Rates (from the brief): trade.rejected.* where desk = rates and notional > 10,000,000
+# -> email + UI; title "Rejected {{payload.currency}} {{payload.notional}} — {{payload.reason}}".
+id: rates-large-trade-rejected
+owner: team:rates
+name: Large rates trade rejected
+when:
+  all:
+    - {field: meta.schema, op: glob, value: "trade.rejected.*"}
+    - {field: payload.desk, op: eq, value: rates}
+    - {field: payload.notional, op: gt, value: 10000000}
+severity: warning
+present:
+  title: "Rejected {{payload.currency}} {{payload.notional}} — {{payload.reason}}"
+  body: "Trade {{payload.tradeId}} from {{meta.producer}}"
+  fields: [payload.tradeId, payload.desk, payload.notional, payload.currency, payload.reason]
+  colour: amber
+group:
+  by: [payload.tradeId]
+notify:
+  - to: team:rates
+    channels: [email, ui]

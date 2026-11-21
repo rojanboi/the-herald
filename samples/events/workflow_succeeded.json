@@ -1,0 +1,8 @@
+{
+  "type": "WORKFLOW_SUCCEEDED",
+  "workflowId": "WF-20261023-00042",
+  "workflowName": "order-settlement",
+  "severity": "INFO",
+  "environment": "prod",
+  "timestamp": "2026-10-23T09:19:40.120Z"
+}

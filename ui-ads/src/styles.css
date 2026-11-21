@@ -1,0 +1,76 @@
+/* Layout only. Every colour, space, radius and shadow is an Atlassian design token (var(--ds-*)),
+   so this file follows the theme the components use. */
+.page { padding: var(--ds-space-300) var(--ds-space-400) var(--ds-space-800); max-width: 1440px; }
+@media (max-width: 640px) { .page { padding: var(--ds-space-200) var(--ds-space-200) var(--ds-space-600); } }
+
+.logo-mark { display: block; border-radius: var(--ds-radius-tile, 25%); }
+
+/* board */
+.board { display: grid; grid-template-columns: repeat(3, minmax(260px, 1fr)); gap: var(--ds-space-200); align-items: start; }
+.column { background: var(--ds-surface-sunken); border-radius: var(--ds-radius-xlarge); padding: var(--ds-space-100);
+  min-height: 220px; transition: background-color var(--ds-duration-medium, 200ms), box-shadow var(--ds-duration-medium, 200ms); }
+.column.over { background: var(--ds-background-selected); box-shadow: inset 0 0 0 2px var(--ds-border-selected); }
+.column-head { display: flex; align-items: center; gap: var(--ds-space-100); padding: var(--ds-space-100) var(--ds-space-100) var(--ds-space-150); }
+.column-body { display: flex; flex-direction: column; gap: var(--ds-space-100); }
+.card { background: var(--ds-surface-raised); border-radius: var(--ds-radius-large); box-shadow: var(--ds-shadow-raised);
+  padding: var(--ds-space-150); cursor: grab; text-align: start; width: 100%; border: 0; font: inherit; color: inherit;
+  display: flex; flex-direction: column; gap: var(--ds-space-100);
+  transition: box-shadow var(--ds-duration-short, 100ms), transform var(--ds-duration-short, 100ms), opacity var(--ds-duration-short, 100ms); }
+.card:hover { box-shadow: var(--ds-shadow-overlay); transform: translateY(-1px); }
+.card:focus-visible { outline: 2px solid var(--ds-border-focused); outline-offset: 2px; }
+.card.dragging { opacity: 0.4; }
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--ds-space-100); }
+.card-meta { display: flex; align-items: center; gap: var(--ds-space-075); flex-wrap: wrap; }
+.empty-col { padding: var(--ds-space-300) var(--ds-space-150); text-align: center; }
+@media (max-width: 860px) { .board { grid-template-columns: 1fr; } .column { min-height: 0; } }
+
+/* filter bar */
+.filters { display: flex; gap: var(--ds-space-100); align-items: center; flex-wrap: wrap; }
+.filters > .grow { flex: 1 1 200px; max-width: 280px; }
+.filters > .pick { flex: 0 1 200px; min-width: 170px; }
+
+/* tiles and panels */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--ds-space-200); }
+.tile { background: var(--ds-surface-raised); border: 1px solid var(--ds-border); border-radius: var(--ds-radius-xlarge);
+  padding: var(--ds-space-200); display: flex; flex-direction: column; gap: var(--ds-space-150); text-decoration: none; color: inherit;
+  transition: box-shadow var(--ds-duration-medium, 200ms), border-color var(--ds-duration-medium, 200ms), transform var(--ds-duration-medium, 200ms); }
+a.tile:hover { box-shadow: var(--ds-shadow-overlay); border-color: var(--ds-border-bold, var(--ds-border)); transform: translateY(-2px); text-decoration: none; color: inherit; }
+a.tile:focus-visible { outline: 2px solid var(--ds-border-focused); outline-offset: 2px; }
+.tile-stats { display: flex; gap: var(--ds-space-300); }
+.panel { border: 1px solid var(--ds-border); border-radius: var(--ds-radius-xlarge); padding: var(--ds-space-200); background: var(--ds-surface); }
+.stat { display: flex; flex-direction: column; }
+.stat b { font: var(--ds-font-heading-large); }
+
+/* issue view */
+.issue { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--ds-space-400); align-items: start; }
+@media (max-width: 900px) { .issue { grid-template-columns: 1fr; } }
+.field { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--ds-space-100); align-items: center; min-height: 32px; }
+.kv { display: grid; grid-template-columns: minmax(96px, max-content) minmax(0, 1fr); gap: var(--ds-space-075) var(--ds-space-200); margin: 0; padding: 0; align-items: center; }
+.kv dt { color: var(--ds-text-subtle); margin: 0; padding: 0; font-weight: inherit; } .kv dd { margin: 0; padding: 0; overflow-wrap: anywhere; }
+.prefs { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: var(--ds-space-075) var(--ds-space-100); align-items: center; }
+.step { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: var(--ds-space-150); align-items: start;
+  padding: var(--ds-space-150); border-radius: var(--ds-radius-large); background: var(--ds-surface-sunken); }
+.step-num { width: 24px; height: 24px; border-radius: var(--ds-radius-full); display: grid; place-items: center;
+  background: var(--ds-background-neutral); font: var(--ds-font-body-small); font-weight: var(--ds-font-weight-semibold, 600); }
+.step.done .step-num { background: var(--ds-background-success-bold); color: var(--ds-text-inverse); }
+.timeline { display: flex; flex-direction: column; gap: var(--ds-space-150); }
+.timeline-row { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: var(--ds-space-100); }
+.mono { font-family: var(--ds-font-family-code, ui-monospace, Menlo, monospace); font-size: 12px; }
+.clickable-row { cursor: pointer; }
+.search-results { display: flex; flex-direction: column; gap: var(--ds-space-025); max-height: 50vh; overflow: auto; }
+.search-hit { display: flex; align-items: center; gap: var(--ds-space-150); padding: var(--ds-space-100) var(--ds-space-150);
+  border-radius: var(--ds-radius-medium); text-decoration: none; color: inherit; }
+.search-hit:hover, .search-hit:focus-visible { background: var(--ds-background-neutral-subtle-hovered); text-decoration: none; color: inherit; }
+
+/* phones */
+.scroll-x { overflow-x: auto; max-width: 100%; }
+@media (max-width: 640px) {
+  .scroll-x table { min-width: 680px; }
+  .filters > .grow, .filters > .pick { flex: 1 1 100%; max-width: none; }
+}
+
+/* The components already honour "reduce motion"; these are the transitions this file adds. */
+@media (prefers-reduced-motion: reduce) {
+  .card, .tile, .column { transition: none; }
+  .card:hover, a.tile:hover { transform: none; }
+}

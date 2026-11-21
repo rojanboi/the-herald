@@ -1,0 +1,24 @@
+{
+  "label": "4 workers, kafka 4000/s, 50% match",
+  "run": "bccaa1f4",
+  "source": "kafka",
+  "events_sent": 60000,
+  "target_rate": 4000,
+  "achieved_send_rate": 3998,
+  "send_errors": {
+    "webhook": 0,
+    "kafka": 0
+  },
+  "events_matched_expected": 30001,
+  "events_matched_counted": 30001,
+  "deliveries_expected": 30001,
+  "deliveries_done": 30001.0,
+  "deliveries_outstanding": 0.0,
+  "processed_events_per_second": 3183,
+  "latency_ms": {
+    "p50_ms": 1428.8,
+    "p99_ms": 4887.2,
+    "max_ms": 5636.1
+  },
+  "complete": true
+}

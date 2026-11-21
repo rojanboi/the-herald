@@ -1,0 +1,261 @@
+/* Herald escalation flow editor. Everything is scoped under .hf-root so it cannot leak into the host page. */
+
+.hf-root {
+  --hf-text: #172b4d;
+  --hf-muted: #626f86;
+  --hf-border: #dcdfe4;
+  --hf-navy: #161b5e;
+  --hf-selected: #dde2f8;
+  --hf-hover: #edf0fb;
+  --hf-surface: #ffffff;
+  --hf-canvas: #f7f8f9;
+
+  /* React Flow's own theme hooks */
+  --xy-background-color: var(--hf-canvas);
+  --xy-edge-stroke: var(--hf-muted);
+  --xy-edge-stroke-selected: var(--hf-navy);
+  --xy-edge-stroke-width: 1.5;
+  --xy-connectionline-stroke: var(--hf-navy);
+  --xy-connectionline-stroke-width: 1.5;
+  --xy-handle-background-color: var(--hf-surface);
+  --xy-handle-border-color: var(--hf-navy);
+  --xy-controls-box-shadow: none;
+  --xy-controls-button-background-color: var(--hf-surface);
+  --xy-controls-button-background-color-hover: var(--hf-hover);
+  --xy-controls-button-color: var(--hf-text);
+  --xy-controls-button-color-hover: var(--hf-navy);
+  --xy-controls-button-border-color: var(--hf-border);
+  --xy-attribution-background-color: transparent;
+
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+  font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--hf-text);
+  text-align: left;
+}
+
+.hf-root *,
+.hf-root *::before,
+.hf-root *::after {
+  box-sizing: border-box;
+}
+
+.hf-root .react-flow {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* ---- Nodes ---- */
+
+.hf-root .react-flow__node {
+  /* the card below draws everything; React Flow's wrapper stays invisible */
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+}
+
+.hf-node {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 220px;
+  padding: 12px;
+  border: 1px solid var(--hf-border);
+  border-radius: 8px;
+  background: var(--hf-surface);
+  color: var(--hf-text);
+}
+
+.hf-root .react-flow__node:hover .hf-node {
+  border-color: #b3b9c4;
+}
+
+.hf-root .react-flow__node.selected .hf-node,
+.hf-root .react-flow__node:focus-visible .hf-node {
+  border-color: var(--hf-navy);
+  outline: 2px solid var(--hf-navy);
+  outline-offset: -1px;
+}
+
+.hf-node--trigger {
+  border-left: 4px solid var(--hf-navy);
+  padding-left: 10px;
+}
+
+.hf-root .react-flow__node:hover .hf-node--trigger {
+  border-left-color: var(--hf-navy);
+}
+
+.hf-node--inform {
+  border-style: dashed;
+  border-color: #b3b9c4;
+  background: var(--hf-canvas);
+}
+
+.hf-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.hf-muted {
+  color: var(--hf-muted);
+}
+
+.hf-small {
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.hf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.hf-chips:empty {
+  display: none;
+}
+
+.hf-chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 1px 6px;
+  border: 1px solid var(--hf-border);
+  border-radius: 4px;
+  background: var(--hf-canvas);
+  color: var(--hf-text);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hf-chip strong {
+  font-weight: 600;
+}
+
+.hf-chip--level {
+  border-color: transparent;
+  background: var(--hf-selected);
+  color: var(--hf-navy);
+}
+
+.hf-chip--quiet {
+  border-color: var(--hf-border);
+  background: var(--hf-surface);
+  color: var(--hf-muted);
+}
+
+.hf-chip--critical,
+.hf-chip--high {
+  border-color: transparent;
+  background: #ffd5d2;
+  color: #ae2e24;
+}
+
+.hf-chip--medium {
+  border-color: transparent;
+  background: #f8e6a0;
+  color: #7f5f01;
+}
+
+.hf-chip--low {
+  border-color: transparent;
+  background: #dde2f8;
+  color: #161b5e;
+}
+
+/* ---- Handles (the dots edges are dragged from) ---- */
+
+.hf-root .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border-width: 1.5px;
+}
+
+.hf-root .react-flow__handle.connectionindicator:hover,
+.hf-root .react-flow__handle.connectingfrom,
+.hf-root .react-flow__handle.connectingto {
+  background-color: var(--hf-navy);
+}
+
+.hf-root.hf-readonly .react-flow__handle {
+  width: 6px;
+  height: 6px;
+  border-width: 1px;
+  border-color: var(--hf-muted);
+}
+
+/* ---- Edges ---- */
+
+.hf-root .react-flow__edge.hf-edge--inform .react-flow__edge-path {
+  stroke-dasharray: 6 4;
+}
+
+.hf-root .react-flow__edge.selected .react-flow__edge-path,
+.hf-root .react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.hf-edge-label {
+  position: absolute;
+  max-width: 132px;
+  padding: 2px 6px;
+  border: 1px solid var(--hf-border);
+  border-radius: 4px;
+  background: var(--hf-surface);
+  color: var(--hf-text);
+  font-size: 12px;
+  line-height: 1.3;
+  text-align: center;
+  text-wrap: balance;
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.hf-edge-label:hover {
+  background: var(--hf-hover);
+}
+
+.hf-edge-label.is-selected {
+  border-color: var(--hf-navy);
+  background: var(--hf-selected);
+  color: var(--hf-navy);
+}
+
+/* ---- Zoom buttons ---- */
+
+.hf-root .react-flow__controls {
+  border: 1px solid var(--hf-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--hf-surface);
+}
+
+.hf-root .react-flow__controls-button {
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.hf-root .react-flow__controls-button:focus-visible {
+  outline: 2px solid var(--hf-navy);
+  outline-offset: -2px;
+}
+
+.hf-root .react-flow__attribution a {
+  color: var(--hf-muted);
+}

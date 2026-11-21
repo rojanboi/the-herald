@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escalation flow editor: demo</title>
+<!-- Source of this page: ui-flow/public/demo.html (copied here by `npm run build`). -->
+<link rel="stylesheet" href="herald-flow.css">
+<style>
+  @font-face{font-family:"IBM Plex Sans";font-style:normal;font-weight:100 700;font-stretch:75% 100%;font-display:swap;src:url(../brand/fonts/ibm-plex-sans.ttf) format("truetype")}
+  body{margin:0;padding:24px;background:#fff;color:#172b4d;font:14px/1.45 "IBM Plex Sans",ui-sans-serif,system-ui,sans-serif}
+  h1{margin:0 0 12px;font-size:20px;font-weight:600}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+  button{font:inherit;padding:5px 10px;border:1px solid #dcdfe4;border-radius:6px;background:#fff;color:#172b4d;cursor:pointer}
+  button:hover{background:#EDF0FB}
+  label{display:inline-flex;align-items:center;gap:6px}
+  #flow{height:560px;border:1px solid #dcdfe4;border-radius:8px;overflow:hidden}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  h2{margin:0 0 6px;font-size:14px;font-weight:600}
+  pre{margin:0;padding:12px;height:220px;overflow:auto;border:1px solid #dcdfe4;border-radius:8px;background:#f7f8f9;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<h1>Escalation flow editor</h1>
+<div class="bar">
+  <button data-add="trigger">Add a trigger</button>
+  <button data-add="notify">Add a step</button>
+  <button data-add="inform">Add an observer</button>
+  <button id="remove">Remove selected</button>
+  <button id="fit">Fit to view</button>
+  <button id="remount">Destroy and mount again</button>
+  <label><input type="checkbox" id="readonly"> Read only</label>
+</div>
+<div id="flow"></div>
+<div class="cols">
+  <div><h2>Selected (onSelect)</h2><pre id="sel">null</pre></div>
+  <div><h2>Flow (onChange)</h2><pre id="out"></pre></div>
+</div>
+
+<script src="herald-flow.js"></script>
+<script>
+  var flow = {
+    nodes: [
+      { id: 'start', kind: 'trigger', position: { x: 0, y: 34 },
+        data: { title: 'Critical bug', problem: 'bug', severity: 'critical' } },
+      { id: 'l2', kind: 'notify', position: { x: 380, y: 20 },
+        data: { level: 'L2', who: 'Software engineer on call', channels: ['call', 'teams'], respondMinutes: 5 } },
+      { id: 'l3', kind: 'notify', position: { x: 760, y: 20 },
+        data: { level: 'L3', who: 'Team lead', channels: ['call'], respondMinutes: 10 } },
+      { id: 'l4', kind: 'notify', position: { x: 1140, y: 31 },
+        data: { level: 'L4', who: 'Head of engineering', channels: ['call', 'sms'] } },
+      { id: 'mgmt', kind: 'inform', position: { x: 380, y: 260 },
+        data: { level: 'L4', who: 'Management', note: 'Sees everything. Is not called.' } }
+    ],
+    edges: [
+      { id: 'e-start-l2', source: 'start', target: 'l2', data: { minutes: null, always: false } },
+      { id: 'e-l2-l3', source: 'l2', target: 'l3', data: { minutes: 5, always: false } },
+      { id: 'e-l3-l4', source: 'l3', target: 'l4', data: { minutes: 10, always: false } },
+      { id: 'e-start-mgmt', source: 'start', target: 'mgmt', data: { minutes: null, always: true } }
+    ]
+  };
+
+  var out = document.getElementById('out');
+  var sel = document.getElementById('sel');
+  var readOnly = document.getElementById('readonly');
+  var editor;
+
+  function show(el, value) { el.textContent = JSON.stringify(value, null, 2); }
+
+  function start() {
+    editor = HeraldFlow.mount(document.getElementById('flow'), {
+      flow: flow,
+      readOnly: readOnly.checked,
+      onChange: function (next) { flow = next; show(out, next); },
+      onSelect: function (s) { show(sel, s); }
+    });
+    show(out, editor.getFlow());
+    show(sel, null);
+  }
+
+  document.querySelectorAll('[data-add]').forEach(function (button) {
+    button.addEventListener('click', function () { editor.addNode(button.dataset.add); });
+  });
+  document.getElementById('remove').addEventListener('click', function () { editor.removeSelected(); });
+  document.getElementById('fit').addEventListener('click', function () { editor.fitView(); });
+  document.getElementById('remount').addEventListener('click', function () { editor.destroy(); start(); });
+  readOnly.addEventListener('change', function () { editor.setReadOnly(readOnly.checked); });
+
+  start();
+</script>
+</body>
+</html>

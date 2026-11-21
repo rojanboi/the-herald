@@ -1,0 +1,375 @@
+{
+  "realm": "herald",
+  "displayName": "Herald (demo identity provider)",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "rememberMe": false,
+  "loginWithEmailAllowed": true,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "permanentLockout": false,
+  "passwordPolicy": "length(12) and notUsername",
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+  "accessTokenLifespan": 300,
+  "roles": {
+    "client": {
+      "herald": [
+        {
+          "name": "viewer",
+          "description": "Read alerts of own teams"
+        },
+        {
+          "name": "responder",
+          "description": "Acknowledge, resolve, run safe runbook steps"
+        },
+        {
+          "name": "editor",
+          "description": "Change rules and runbooks of own teams"
+        },
+        {
+          "name": "approver",
+          "description": "Approve risky runbook actions"
+        },
+        {
+          "name": "admin",
+          "description": "Everything, all teams"
+        },
+        {
+          "name": "team.settlements",
+          "description": "Member of team settlements"
+        },
+        {
+          "name": "team.pricing",
+          "description": "Member of team pricing"
+        },
+        {
+          "name": "team.rates",
+          "description": "Member of team rates"
+        },
+        {
+          "name": "team.counterparty-support",
+          "description": "Member of team counterparty-support"
+        },
+        {
+          "name": "team.loadtest",
+          "description": "Member of team loadtest"
+        }
+      ]
+    }
+  },
+  "groups": [
+    {
+      "name": "Settlements",
+      "path": "/Settlements",
+      "clientRoles": {
+        "herald": [
+          "team.settlements",
+          "responder"
+        ]
+      }
+    },
+    {
+      "name": "Settlements leads",
+      "path": "/Settlements leads",
+      "clientRoles": {
+        "herald": [
+          "approver"
+        ]
+      }
+    },
+    {
+      "name": "Pricing",
+      "path": "/Pricing",
+      "clientRoles": {
+        "herald": [
+          "team.pricing",
+          "responder"
+        ]
+      }
+    },
+    {
+      "name": "Pricing leads",
+      "path": "/Pricing leads",
+      "clientRoles": {
+        "herald": [
+          "approver"
+        ]
+      }
+    },
+    {
+      "name": "Rates desk",
+      "path": "/Rates desk",
+      "clientRoles": {
+        "herald": [
+          "team.rates",
+          "responder"
+        ]
+      }
+    },
+    {
+      "name": "Rates desk leads",
+      "path": "/Rates desk leads",
+      "clientRoles": {
+        "herald": [
+          "approver"
+        ]
+      }
+    },
+    {
+      "name": "Counterparty support",
+      "path": "/Counterparty support",
+      "clientRoles": {
+        "herald": [
+          "team.counterparty-support",
+          "responder"
+        ]
+      }
+    },
+    {
+      "name": "Counterparty support leads",
+      "path": "/Counterparty support leads",
+      "clientRoles": {
+        "herald": [
+          "approver"
+        ]
+      }
+    },
+    {
+      "name": "Rule editors",
+      "path": "/Rule editors",
+      "clientRoles": {
+        "herald": [
+          "editor"
+        ]
+      }
+    },
+    {
+      "name": "Herald admins",
+      "path": "/Herald admins",
+      "clientRoles": {
+        "herald": [
+          "admin"
+        ]
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "herald",
+      "name": "Herald",
+      "description": "DEMO ONLY: throwaway secret and test users. Production uses the organisation's own provider (docs/SSO.md).",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "MZ_ny8IQoisMuewV-Rzufv2gGIbxBTUaxdneeupxvIQ",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "frontchannelLogout": true,
+      "redirectUris": [
+        "http://localhost:8080/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:8080"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/login"
+      },
+      "protocolMappers": [
+        {
+          "name": "herald roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "herald",
+            "claim.name": "roles",
+            "multivalued": "true",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "anna",
+      "enabled": true,
+      "email": "anna@example.com",
+      "emailVerified": true,
+      "firstName": "Anna",
+      "lastName": "-",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "anna-herald-demo",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/Herald admins"
+      ]
+    },
+    {
+      "username": "priya",
+      "enabled": true,
+      "email": "priya@example.com",
+      "emailVerified": true,
+      "firstName": "Priya",
+      "lastName": "N.",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "priya-herald-demo",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/Settlements"
+      ]
+    },
+    {
+      "username": "marcus",
+      "enabled": true,
+      "email": "marcus@example.com",
+      "emailVerified": true,
+      "firstName": "Marcus",
+      "lastName": "L.",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "marcus-herald-demo",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/Settlements",
+        "/Settlements leads"
+      ]
+    },
+    {
+      "username": "sam",
+      "enabled": true,
+      "email": "sam@example.com",
+      "emailVerified": true,
+      "firstName": "Sam",
+      "lastName": "O.",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "sam-herald-demo",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/Settlements",
+        "/Pricing",
+        "/Rates desk",
+        "/Rule editors"
+      ]
+    },
+    {
+      "username": "tomas",
+      "enabled": true,
+      "email": "tomas@example.com",
+      "emailVerified": true,
+      "firstName": "Tomas",
+      "lastName": "K.",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "tomas-herald-demo",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/Pricing"
+      ]
+    },
+    {
+      "username": "ines",
+      "enabled": true,
+      "email": "ines@example.com",
+      "emailVerified": true,
+      "firstName": "Ines",
+      "lastName": "R.",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ines-herald-demo",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/Pricing",
+        "/Pricing leads"
+      ]
+    },
+    {
+      "username": "elena",
+      "enabled": true,
+      "email": "elena@example.com",
+      "emailVerified": true,
+      "firstName": "Elena",
+      "lastName": "V.",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "elena-herald-demo",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/Rates desk",
+        "/Rates desk leads"
+      ]
+    },
+    {
+      "username": "devon",
+      "enabled": true,
+      "email": "devon@example.com",
+      "emailVerified": true,
+      "firstName": "Devon",
+      "lastName": "A.",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "devon-herald-demo",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/Counterparty support",
+        "/Counterparty support leads"
+      ]
+    },
+    {
+      "username": "nora",
+      "enabled": true,
+      "email": "nora@example.com",
+      "emailVerified": true,
+      "firstName": "Nora",
+      "lastName": "B.",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "nora-herald-demo",
+          "temporary": false
+        }
+      ],
+      "groups": []
+    }
+  ]
+}

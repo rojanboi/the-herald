@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "herald-ads-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "ui-ads", "run", "dev"],
+      "port": 5173
+    }
+  ]
+}

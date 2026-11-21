@@ -1,0 +1,13 @@
+# Emergency (break-glass) accounts: username + password + one-time code, for when single sign-on is down.
+# Used only with AUTH_MODE=oidc and LOCAL_LOGIN=on. Every sign-in is audited as "break_glass".
+# The values below are NAMES of environment variables, never the secrets themselves:
+#   password_hash_env  holds a scrypt hash   (python -m alertsvc.localauth hash-password)
+#   totp_secret_env    holds a TOTP secret   (python -m alertsvc.localauth new-totp <username>)
+# An account whose variables are missing cannot be used.
+accounts:
+  - username: breakglass
+    person: anna            # who is accountable for it (config/teams.yaml)
+    role: admin
+    teams: []
+    password_hash_env: HERALD_BREAKGLASS_PASSWORD_HASH
+    totp_secret_env: HERALD_BREAKGLASS_TOTP_SECRET

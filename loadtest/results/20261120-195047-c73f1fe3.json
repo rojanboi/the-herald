@@ -1,0 +1,24 @@
+{
+  "label": "1 worker, webhook 1500/s, 5% match",
+  "run": "c73f1fe3",
+  "source": "webhook",
+  "events_sent": 22500,
+  "target_rate": 1500,
+  "achieved_send_rate": 1499,
+  "send_errors": {
+    "webhook": 0,
+    "kafka": 0
+  },
+  "events_matched_expected": 1126,
+  "events_matched_counted": 1126,
+  "deliveries_expected": 1126,
+  "deliveries_done": 1126.0,
+  "deliveries_outstanding": 0.0,
+  "processed_events_per_second": 1502,
+  "latency_ms": {
+    "p50_ms": 11.3,
+    "p99_ms": 70.1,
+    "max_ms": 127.8
+  },
+  "complete": true
+}

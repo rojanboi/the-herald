@@ -1,0 +1,17 @@
+{
+  "specversion": "1.0",
+  "id": "evt-7f3a91",
+  "source": "/risk/margin-engine",
+  "type": "com.example.risk.margin_call.raised",
+  "time": "2026-10-23T09:20:11Z",
+  "data": {
+    "account": {"id": "ACC-44120", "desk": "equities", "tier": 2},
+    "shortfall": {"amount": 1850000.5, "currency": "USD"},
+    "priority": "P1",
+    "tags": ["intraday", "auto-liquidation-eligible"],
+    "positions": [
+      {"symbol": "XYZ", "exposure": 9200000},
+      {"symbol": "ABC", "exposure": 4100000}
+    ]
+  }
+}

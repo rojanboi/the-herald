@@ -1,0 +1,24 @@
+{
+  "label": "500 identical errors in 1 s",
+  "run": "f6979268",
+  "source": "both",
+  "events_sent": 500,
+  "target_rate": 500,
+  "achieved_send_rate": 495,
+  "send_errors": {
+    "webhook": 0,
+    "kafka": 0
+  },
+  "events_matched_expected": 500,
+  "events_matched_counted": 500,
+  "deliveries_expected": 1,
+  "deliveries_done": 1.0,
+  "deliveries_outstanding": 0.0,
+  "processed_events_per_second": 6518,
+  "latency_ms": {
+    "p50_ms": 55.3,
+    "p99_ms": 55.3,
+    "max_ms": 55.3
+  },
+  "complete": true
+}
