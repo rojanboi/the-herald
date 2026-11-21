@@ -674,6 +674,21 @@ body[data-level="L0"] .navfoot,body[data-level="L1"] .navfoot{display:none}
 .flpanel{border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;background:#fff} .flpanel h3{margin:0}
 .flwords{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
 @media (max-width:1000px){ .flgrid{grid-template-columns:minmax(0,1fr)} }
+/* sidebar items keep their height on a short window (the list scrolls instead) */
+#nav .navb,#nav .navrow,#nav .navsub{flex:none}
+/* 21 Nov, fifth round: the top bar is the same whether the sidebar is shown or hidden, so the logo, the sidebar
+   button and the search box never move. One left edge (--edge) for the logo, the sidebar icons and, when the
+   sidebar is hidden, the page itself. */
+:root{--edge:24px}
+@media (min-width:861px){
+  .top-in,body.nav-hidden .top-in{grid-template-columns:calc(var(--navw) - var(--edge)) minmax(0,1fr) auto;padding-left:var(--edge)}
+  .tleft,body.nav-hidden .tleft{padding-right:14px}
+  .brand,body.nav-hidden .brand{margin-left:0}
+  #nav .navb{padding-left:14px}
+  body.nav-hidden #main{padding-left:var(--edge)}
+}
+/* phone: search and Create no longer slide over the logo */
+@media (max-width:520px){ .tmid{justify-content:flex-end} .create>.btn{font-size:0;gap:0;padding-inline:8px} }
 </style>
 <script src="brand/herald-trumpeter.js" defer></script>
 <link rel="stylesheet" href="flow/herald-flow.css">
@@ -1084,8 +1099,7 @@ function viewFeed(){const t=T(),f=S.f,q=(S.q||'').trim().toLowerCase();
   const match=a=>(!f.platform||a.source===f.platform)&&(!f.assignee||(f.assignee==='none'?!a.imRef:a.imRef===f.assignee))&&(!q||(a.key+' '+a.title+' '+a.body).toLowerCase().includes(q));
   const list=S.alerts.filter(match).filter(lvSees),filtered=!!(q||f.platform||f.assignee),rows=list.filter(a=>f.resolved||a.status!=='resolved');
   const head=pageHead({crumbs:'<span>Teams</span>',title:`<span class="ptile lg" style="background:#262B5E" aria-hidden="true">${ic('people_team')}</span>${esc(t.personal?t.oncall:t.name)}`,
-      right:`<span class="live" id="liveDot">${liveHtml()}</span>`,
-      desc:(t.personal?'Alerts that go to '+esc(t.oncall)+' personally.':'Problems that need someone from '+esc(t.name)+'.')+' New ones appear by themselves. Open an alert to see what to do, or hand it to a colleague.'});
+      right:`<span class="live" id="liveDot">${liveHtml()}</span>`});
   const bar=lvNote()+`<div class="row tbar"><label class="search sm">${ic('search','sm')}<input class="in" id="alertQ" data-oni="q" value="${esc(S.q)}" placeholder="Search" aria-label="Search this team’s alerts"></label>
       <div class="avgroup" role="group" aria-label="Filter by assignee">${(t.memberIds||[]).map(id=>`<button class="avf" data-act="fAssignee" data-v="person:${esc(id)}" aria-pressed="${f.assignee==='person:'+id}" title="Assigned to ${esc(pname('person:'+id))}">${avatar(pname('person:'+id),true)}</button>`).join('')}
         <button class="avf" data-act="fAssignee" data-v="none" aria-pressed="${f.assignee==='none'}" title="Unassigned"><span class="av sm none">${ic('person','sm')}</span></button></div>
@@ -1108,8 +1122,7 @@ function snippetFor(x,body){
   if(x.type==='http_poll')return '# Herald fetches from this platform itself. Nothing to send.';
   return 'curl -X POST '+location.origin+'/ingest/'+x.id+' \\\n'+(x.needs_token?'  -H "X-Herald-Token: <the token for this platform>" \\\n':'')+'  -H "Content-Type: application/json" \\\n  -d \''+body+"'";}
 function viewPlatforms(){const cur=S.platform&&plat(S.platform);if(cur)return viewPlatform(cur);
-  return pageHead({title:'Platforms',right:`<button class="btn pri" data-act="connectOpen" ${canEdit()?'':'disabled title="'+sso('Choose a rule editor or team lead under Viewing as','Needs the rule editor or team lead role')+'"'}>${ic('add','sm')}Connect platform</button>`,
-      desc:'The systems that send events to Herald. Each card shows how many problems are open on that platform for '+esc(T().name)+'. Open one to see its problems and events, send it an event, or see how it is connected.'})
+  return pageHead({title:'Platforms',right:`<button class="btn pri" data-act="connectOpen" ${canEdit()?'':'disabled title="'+sso('Choose a rule editor or team lead under Viewing as','Needs the rule editor or team lead role')+'"'}>${ic('add','sm')}Connect platform</button>`})
     +(S.platforms.length?`<div class="pgrid">${S.platforms.map(x=>{const open=x.firing+x.acked;return `<button class="pcard" data-act="openPlatform" data-id="${esc(x.id)}" aria-label="Open ${esc(x.name)}">
         <span class="tile">${ic(PICON[x.icon]||'plug_connected','lg')}</span>
         <span class="pc-main"><b>${esc(x.name)}</b><small>${PTYPE[x.type]||esc(x.type)}${x.topic?' · '+esc(x.topic):''}</small>
@@ -1253,7 +1266,7 @@ function drawerEvent(ev){const x=S.evExplain;
 /* ---- rules ---- */
 function viewRules(){if(S.draft)return viewEditor();
   const mine=T().owner;const rs=S.rules.slice().sort((a,b)=>(b.owner===mine)-(a.owner===mine));
-  return `<div class="row"><div class="grow"><h1>Rules</h1><p class="muted">A rule says which events matter, who hears about them, and how the alert looks. Changes apply to the next event, with no restart.</p></div>
+  return `<div class="row"><div class="grow"><h1>Rules</h1></div>
       <button class="btn pri" data-act="newRule">${ic('add','sm')}New rule</button></div>
     ${canEdit()?'':'<div class="banner info">'+sso('You are looking as a responder, so rules can be read but not changed. Choose a rule editor or team lead under “Viewing as” at the top to change them.','You can read rules but not change them. Changing rules needs the rule editor role: ask your team lead.')+'</div>'}
     <div class="stack">${rs.map(r=>`<div class="rule"><div class="stack" style="gap:5px"><div class="row"><span class="badge">${esc(TEAMS[teamKey(r.owner)].name)}</span><h3>${esc(r.name)}</h3><span class="note mono">v${r.version}${r.origin==='file'?' · from a config file':''}</span></div>
@@ -1333,7 +1346,7 @@ function rbStepsHtml(steps){return `<ol>${steps.map((s,i)=>`<li class="rstep"><s
     <div class="row" style="gap:5px"><span class="badge">${{check:'Check',action:'Action',manual:'By hand',wait:'Wait'}[s.kind]}</span>${s.action&&s.kind!=='wait'?`<span class="badge mono">${esc(s.action)}</span>`:''}${approvalBadge(s)}${s.suggest&&!s.action?`<span class="badge">could be automated: ${esc(s.suggest)}</span>`:''}</div>
     ${s.condition?`<span class="note">Only if: ${esc(s.condition)}</span>`:''}${Object.keys(s.params||{}).length?`<span class="note mono" style="overflow-wrap:anywhere">${varHi(Object.keys(s.params).map(k=>k+': '+s.params[k]).join(', '))}</span>`:''}</div></li>`).join('')}</ol>`;}
 function viewRunbooks(){
-  return `<div><h1>Runbooks</h1><p class="muted">Paste instructions in whatever shape the team already has. Herald keeps the original and turns it into steps that can be ticked off, run, or sent for approval.</p></div>
+  return `<div><h1>Runbooks</h1></div>
     ${Object.keys(S.runbooks).map(k=>{const rb=S.runbooks[k];const used=rb.usedBy||[];
       return `<section class="card"><div class="row"><h2 class="grow">${esc(rb.title)}</h2><span class="badge">${esc(rb.format)}</span>
           ${rb.parsedBy==='ai'?(rb.reviewedBy?`<span class="badge ok">AI draft, reviewed by ${esc(rb.reviewedBy)}</span>`:'<span class="badge ai">AI draft, needs review</span>'):'<span class="badge ok">Read by parser</span>'}</div>
@@ -1354,7 +1367,7 @@ function viewDeliveries(){const t=T(),th=threads();const people=[...new Set([t.o
   const codes=[...new Set((msgs.filter(m=>m.kind==='sms').slice(-3).map(m=>m.text).join(' ').match(/\b(?:ACK|YES)\s\d{1,8}\b/g)||[]))].slice(-2);
   const st=n=>n.status==='sent'?(n.channel==='ui'?'shown':'delivered'):n.status==='retrying'?'retrying, attempt '+n.attempts:n.status==='dead'?'failed, sent another way':'sending';
   const cls=n=>n.status==='sent'?'delivered':n.status==='retrying'?'retrying':n.status==='dead'?'parked':'pending';
-  return `<div><h1>Sent messages</h1><p class="muted">Every call, text and email Herald sent for this team. In this demo the phone and the mailbox below stand in for real ones; a reply typed on the phone acts on the real alert.</p></div>
+  return `<div><h1>Sent messages</h1></div>
     ${S.phone.down?`<div class="banner"><b>The SMS and phone gateway is down.</b> ${waiting} message${waiting===1?' is':'s are'} waiting and will be sent when it returns. Nothing is dropped. <button class="btn link" data-act="smsToggle">Bring it back</button></div>`:''}
     <div class="dl-grid"><section class="stack"><h2>Phone</h2>
         <div class="ptabs" role="group" aria-label="Whose phone">${people.map(p=>`<button class="ptab" data-act="phoneTab" data-who="${esc(p)}" aria-pressed="${p===who}">${esc(pname('person:'+p))}</button>`).join('')}</div>
@@ -1375,7 +1388,7 @@ function viewDeliveries(){const t=T(),th=threads();const people=[...new Set([t.o
 
 /* ---- preferences, audit ---- */
 function viewPreferences(){const t=T();
-  return `<div><h1>Teams</h1><p class="muted">How ${esc(t.personal?t.oncall:'the '+t.name+' team')} is reached. Rules that notify “by preference” follow this table. It is read from <code>config/teams.yaml</code>; changing it on this screen is not built yet.</p></div>
+  return `<div><h1>Teams</h1></div>
     <div class="grid2"><section class="card"><h2>On call now</h2><p><b>${esc(t.oncall)}</b></p>${t.rota.length?`<dl class="kv">${t.rota.map(r=>`<dt>${esc(r[0])}</dt><dd>${esc(r[1])}</dd>`).join('')}</dl>`:'<p class="note">No rota: alerts go straight to this person.</p>'}</section>
       <section class="card"><h2>People</h2><dl class="kv">${t.members.map(m=>`<dt>${esc(m[0])}</dt><dd>${esc(m[1])}</dd>`).join('')}</dl></section></div>
     <section class="card"><h2>Channel by severity</h2><div class="scroll-x"><table><thead><tr><th>Severity</th>${CHS.map(c=>`<th>${CH[c]}</th>`).join('')}</tr></thead><tbody>
@@ -1389,7 +1402,7 @@ function auditDetail(d){d=d||{};const p=[];if(d.text)p.push(d.text);if(d.to)p.pu
 function targetName(t){t=String(t);const i=t.indexOf(':'),k=t.slice(0,i),v=t.slice(i+1);
   if(k==='alert'){const a=alertById(v);return 'Alert'+(a?': '+a.title:' '+v);}if(k==='rule'){const r=ruleById(v);return 'Rule: '+(r?r.name:v);}if(k==='runbook')return 'Runbook: '+((S.runbooks[v]||{}).title||v);if(k==='platform')return 'Platform: '+platName(v);return t;}
 function viewAudit(){
-  return `<div><h1>Activity log</h1><p class="muted">Every acknowledgement, resolution, runbook step, approval and rule change for this team, with who did it. Entries can only be added: the database refuses edits, and each entry carries a fingerprint of the one before it.</p></div>
+  return `<div><h1>Activity log</h1></div>
     ${S.auditDenied?'<div class="banner info">'+sso('The history is open to team leads. Choose the team lead under “Viewing as” at the top to read it.','The activity log is open to team leads and approvers.')+'</div>'
       :`<div class="banner ${S.auditIntact?'info':''}">${S.auditIntact?'Chain checked by the service: no entry has been altered or removed.':'<b>The chain is broken.</b> An entry has been altered or removed.'}</div>
     <section class="card"><div class="scroll-x"><table><thead><tr><th>Time</th><th>Who</th><th>What</th><th>On</th><th class="tech-only">Fingerprint</th></tr></thead><tbody>
@@ -1505,7 +1518,7 @@ function viewLogs(){const d=lgData(),all=d.all,pq=d.pq,win=d.win,rows=d.rows;
   const chip=c=>c.k?`<span class="loz ${c.not?'':(c.k==='severity'&&/crit|err/.test(c.v)?'danger':c.k==='severity'&&/warn/.test(c.v)?'warning':'info')}">${c.not?'not ':''}${esc(c.k)}: ${esc(c.v)}</span>`:`<span class="loz">${c.not?'not ':''}“${esc(c.v)}”</span>`;
   const newest=all.length?Math.max(...all.map(r=>r.e.at)):0;
   const ranges=(S.lg.win?'<option value="" selected>Picked on the timeline</option>':'')+LG_RANGES.map(x=>`<option value="${x[0]}" ${!S.lg.win&&S.lg.range===x[0]?'selected':''}>${x[3]}</option>`).join('');
-  return pageHead({title:'Logs',desc:'Every event Herald received from the connected platforms, newest first.',
+  return pageHead({title:'Logs',
       right:`<select class="in" id="lgRange" data-onc="lgRange" aria-label="Time range">${ranges}</select><button class="toggle" role="switch" aria-checked="${S.lg.live}" data-act="lgLive" title="When on, new events appear by themselves"><span class="sw" aria-hidden="true"></span><span>Live</span></button><button class="btn" data-act="lgCsv" ${rows.length?'':'disabled'}>${ic('arrow_download','sm')}Download as CSV</button>`})
     +`<div class="lgbox"><span class="lgbox-l">Search for</span><label class="lgbox-in">${ic('search','sm')}<input id="lgq" data-oni="lgq" value="${esc(S.lg.q)}" placeholder="timeout severity:error platform:workflow" aria-label="Search logs" autocomplete="off" spellcheck="false"></label>${S.lg.q?`<button class="iconbtn sm" data-act="lgClearQ" title="Clear the search" aria-label="Clear the search">${ic('dismiss','sm')}</button>`:''}</div>`
     +(narrowed?`<div class="row lgchips">${pq.groups.map(g=>g.map(chip).join('<span class="muted">or</span>')).join('')}${S.lg.win?`<span class="loz info">${lgStamp(win[0])} – ${lgStamp(win[1])}</span>`:''}${hidden?`<span class="loz">${hidden} value${hidden>1?'s':''} left out</span>`:''}<button class="btn link" data-act="lgClear">Clear all filters</button></div>`
@@ -1526,9 +1539,9 @@ function viewLogs(){const d=lgData(),all=d.all,pq=d.pq,win=d.win,rows=d.rows;
         what this page shows, not what the service allows. ---- */
 const LEVELS={L0:['Reporter','Anyone in the firm. Reports a problem in plain words.'],L1:['Support team','Small problems and reports from people. Brings in an engineer when needed.'],
   L2:['Engineering team','Every alert of the team, platforms, logs, runbooks. First to be called.'],L3:['Senior engineers','Also rules, escalation flows and approvals.'],L4:['Management','Sees everything. Is kept informed and is never called.']};
-const LV_VIEWS={L0:['report'],L1:['feed','report','knowledge','oncall'],
-  L2:['feed','approvals','platforms','logs','runbooks','preferences','oncall','knowledge','report'],
-  L3:['feed','approvals','platforms','logs','rules','flows','runbooks','preferences','oncall','deliveries','metrics','knowledge','report'],L4:null};
+const LV_VIEWS={L0:['report'],L1:['feed','report','knowledge','oncall','settings'],
+  L2:['feed','approvals','platforms','logs','runbooks','preferences','oncall','knowledge','report','settings'],
+  L3:['feed','approvals','platforms','logs','rules','flows','runbooks','preferences','oncall','deliveries','metrics','knowledge','report','settings'],L4:null};
 const roleLevel=()=>OIDC()?({viewer:'L0',responder:'L2',editor:'L3',approver:'L3',admin:'L4'}[ME.role]||'L2'):(S.role==='responder'?'L2':'L3');
 const level=()=>S.level||roleLevel();
 const lvCan=v=>{const a=LV_VIEWS[level()];return !a||a.includes(v==='foryou'?'feed':v);};
@@ -1539,6 +1552,14 @@ function levelMenu(){const cur=level();return `<div class="msep"></div><div clas
 function lvPrune(){document.body.dataset.level=level();const nav=$('nav');if(!nav)return;
   nav.querySelectorAll('.navb[data-view]').forEach(b=>{if(!lvCan(b.dataset.view))b.remove();});
   if(!lvCan('platforms'))nav.querySelectorAll('.navrow,.navsub').forEach(n=>n.remove());}
+const VIEW_NAME={feed:'Alerts',foryou:'For you',approvals:'Approvals',platforms:'Platforms',logs:'Logs',rules:'Rules',flows:'Escalation flows',runbooks:'Runbooks',preferences:'Teams',oncall:'On-call',deliveries:'Sent messages',audit:'Activity log',metrics:'Metrics',knowledge:'History',settings:'Settings',report:'Report a problem'};
+const lvNeeds=v=>Object.keys(LEVELS).find(k=>{const a=LV_VIEWS[k];return !a||a.includes(v);})||'L4';
+/* A screen outside the person's level says so, and says how to get there. It never sends them somewhere else without a word. */
+function lvDenied(v){const need=lvNeeds(v),cur=level(),home=cur==='L0'?'report':'feed';
+  return `<div class="empty"><span class="tile">${ic('lock_closed','lg')}</span><h2>${esc(VIEW_NAME[v]||'This screen')} is for ${need} ${LEVELS[need][0]} and above</h2>
+    <p class="muted">You are looking at Herald as ${cur} ${LEVELS[cur][0]}${S.level?', which is a preview':''}. ${S.level?'Go back to your own level, or pick another one in the menu under your picture, top right.':'If you need this screen, ask your team lead to change your role.'}</p>
+    <div class="row">${S.level?'<button class="btn pri" data-act="level" data-v="">Back to my own level</button>':''}<button class="btn" data-act="nav" data-view="${home}">Go to ${VIEW_NAME[home]}</button></div></div>`;}
+function lvPreviewBar(){const own=roleLevel();return S.level&&S.level!==own?`<div class="banner info">You are previewing Herald as ${S.level} ${LEVELS[S.level][0]}. Your own level is ${own} ${LEVELS[own][0]}. <button class="btn link" data-act="level" data-v="">Back to my own level</button></div>`:'';}
 function lvNote(){const l=level();return l==='L1'?'<div class="banner info">Support view: you see small problems (warning and info) and anything handed to you. Bigger ones go straight to the engineering team.</div>'
   :l==='L4'?'<div class="banner info">Management view: you see every problem and what is being done about it. Herald keeps you informed and does not call you.</div>':'';}
 
@@ -1547,7 +1568,7 @@ const RP={sys:'',text:'',impact:'slow'};
 const RP_IMPACT={stop:['I cannot work','ERROR'],slow:['It slows me down','WARN'],fyi:['Just letting you know','INFO']};
 function rpMine(){try{return JSON.parse(localStorage.getItem('herald.reports')||'[]');}catch(e){return [];}}
 function viewReport(){const mine=rpMine();
-  return pageHead({title:'Report a problem',desc:'Something is not working? Say it in your own words. The support team gets it at once and brings in an engineer if one is needed. You do not have to know which system it is or what the error means.'})
+  return pageHead({title:'Report a problem'})
     +`<section class="card" style="max-width:720px"><div class="stack" style="gap:14px">
       <label class="field"><span>What is not working</span><select class="in" id="rpSys" data-onc="rpSys" style="width:100%">${opt('','I am not sure',RP.sys)}${S.platforms.map(x=>opt(x.name,x.name,RP.sys)).join('')}${opt('Something else','Something else',RP.sys)}</select></label>
       <label class="field"><span>What happened</span><textarea class="in" id="rpText" data-oni="rpText" rows="4" placeholder="For example: I press Submit on a trade and nothing has happened since 10:40.">${esc(RP.text)}</textarea></label>
@@ -1613,7 +1634,7 @@ function flPanel(){const s=FL.sel,cur=flCur(),ro=!flCanEdit(),dis=ro?'disabled':
     ${num('respondMinutes','Minutes to take the ticket',d.respondMinutes,'After that the next person is told.')}`;
   return body+(ro?'':`<div class="row"><button class="btn warn" data-act="flDel">${ic('delete','sm')}Remove</button><span class="grow"></span><button class="btn subtle" data-act="flUnsel">Done</button></div>`);}
 function viewFlows(){flLoad();const cur=flCur(),ro=!flCanEdit(),list=FL.flows.filter(f=>f.problem===FL.tab);
-  return pageHead({title:'Escalation flows',desc:'Who is told first when something breaks, how long they have to take the ticket, and who is told next. One flow per kind of problem and severity, so a critical vulnerability can go to the blue team while a low bug waits for support.',
+  return pageHead({title:'Escalation flows',
       right:ro?'':`<button class="btn" data-act="flNew">${ic('add','sm')}New flow</button><button class="btn subtle" data-act="flReset" title="Throw away your changes and bring back the six starting flows">Reset</button>`})
     +'<div class="banner info"><b>A design, saved in this browser.</b> The service does not run these chains yet. Today it repeats a notification until someone answers and falls back to another channel; telling the next person on a timer is drawn here and still has to be built.</div>'
     +`<div class="flgrid"><aside class="flside"><span class="seg" role="group" aria-label="Kind of problem"><button data-act="flTab" data-v="bug" aria-pressed="${FL.tab==='bug'}">Bugs</button><button data-act="flTab" data-v="vulnerability" aria-pressed="${FL.tab==='vulnerability'}">Vulnerabilities</button></span>
@@ -1696,7 +1717,7 @@ const hoKv=o=>`<dl class="kv">${Object.keys(o||{}).map(k=>`<dt>${esc(k)}</dt><dd
 const hoRisk=r=>loz((r==='high'?'High':r==='medium'?'Medium':'Low')+' risk',r==='high'?'danger':r==='medium'?'warning':'');
 function viewApprovals(){const list=HO.data.approvals||[],pending=list.filter(a=>a.status==='pending'),done=list.filter(a=>a.status!=='pending');
   const left=a=>{const m=Math.round((Date.parse(a.expiresAt)-Date.now())/6e4);return m>0?'Expires in '+m+' min':'Expired';};
-  return pageHead({title:'Approvals',desc:'Risky actions wait here until a second person agrees. Requests come from runbook steps and from AI agents; an agent can never approve its own request.'})
+  return pageHead({title:'Approvals'})
     +hoBanner(['approvals'],'/v1/approvals')
     +(pending.length?`<div class="stack" style="gap:12px">${pending.map(a=>`<section class="card hoap">
         <div class="row"><h2 class="grow">${esc(hoActor(a.requestedBy))} asks to run <code>${esc(a.action)}</code></h2>${loz(a.origin==='agent_request'?'Agent request':'Runbook step',a.origin==='agent_request'?'new':'')}${hoRisk(a.risk)}<span class="muted num">${left(a)}</span></div>
@@ -1706,7 +1727,7 @@ function viewApprovals(){const list=HO.data.approvals||[],pending=list.filter(a=
       :emptyState('shield_checkmark','Nothing is waiting for you','When a runbook step or an agent needs a second person, the request appears here and on your phone.',''))
     +(done.length?`<h2>Decided</h2><div class="tablewrap"><table><thead><tr><th>Action</th><th>Asked by</th><th>Decided by</th><th>Comment</th><th>Result</th></tr></thead><tbody>${done.map(a=>`<tr><td><code>${esc(a.action)}</code></td><td>${esc(hoActor(a.requestedBy))}</td><td>${esc(hoActor(a.decidedBy)||'Nobody')}</td><td>${esc(a.comment||'')}</td><td>${loz(cap(a.status),a.status==='approved'?'success':a.status==='rejected'?'danger':'')}</td></tr>`).join('')}</tbody></table></div>`:'');}
 function viewOncall(){const d=HO.data,teams=d.teams||[],team=teams.find(t=>t.id===HO.team)||teams[0];
-  const head=pageHead({title:'On-call schedule',desc:'Who is paged first this week, who covers for whom, and who is asked next when nobody answers.',
+  const head=pageHead({title:'On-call schedule',
     right:teams.length>1?`<span class="seg" role="group" aria-label="Team">${teams.map(t=>`<button data-act="hoTeam" data-v="${esc(t.id)}" aria-pressed="${team&&t.id===team.id}">${esc(t.name)}</button>`).join('')}</span>`:''})+hoBanner(['schedules','teams'],'/v1/schedules');
   if(!team)return head+emptyState('clock','No teams yet','A schedule belongs to a team. Create a team first.','');
   const shifts=(d.schedules||[]).filter(s=>s.teamId===team.id),w0=hoWeekStart(),w1=w0+7*864e5,now=Date.now(),pct=t=>((t-w0)/(w1-w0)*100).toFixed(3);
@@ -1725,42 +1746,38 @@ function viewOncall(){const d=HO.data,teams=d.teams||[],team=teams.find(t=>t.id=
     ${(d.rotations||[]).length?`<h2>Rotations</h2><div class="tablewrap"><table><thead><tr><th>Name</th><th>Handover order</th><th>Shift length</th><th>Handover</th></tr></thead><tbody>${d.rotations.map(r=>`<tr><td>${esc(r.name||'Rotation')}</td><td>${esc(r.memberIds.map(hoUser).join(' → '))}</td><td>${r.shiftHours%24===0?(r.shiftHours/24)+' days':r.shiftHours+' hours'}</td><td>${esc(r.handoverTime||'')} ${esc(r.timezone||'')}</td></tr>`).join('')}</tbody></table></div>`:''}`;}
 function viewMetrics(){const m=HO.data.metrics||{},live=!HO.sample.metrics,n=v=>v==null?'—':Math.round(v).toLocaleString('en-GB');
   const tile=(label,val,unit,note,cls)=>`<div class="hotile ${cls||''}"><span class="flabel">${label}</span><b>${val}${unit&&val!=='—'?`<small> ${unit}</small>`:''}</b><small class="muted">${note||''}</small></div>`;
-  return pageHead({title:'Metrics',desc:'How fast events become notifications, and proof that none is lost on the way.'})
+  return pageHead({title:'Metrics'})
     +(live?'':'<div class="banner info"><b>Partly live.</b> This service does not answer <code>/v1/metrics/summary</code> yet. The numbers shown are real and come from its own counter (<code>/api/stats</code>, last 15 minutes); the ones it does not measure are left empty. <button class="btn link" data-act="hoRetry">Check again</button></div>')
     +`<div class="hogrid">${tile('Events per second',n(m.eventsPerSecond),'/s',m.eventsPerSecond==null?'Not measured by this service':'')}${tile('Typical delay (p50)',n(m.latencyP50Ms),'ms','From arrival to the first notification')}${tile('Slowest 1% (p99)',n(m.latencyP99Ms),'ms','')}
       ${tile('Waiting to be sent',n(m.queueDepth),'','Notifications in the queue')}${tile('Events received',n(m.eventsIngested!=null?m.eventsIngested:m.eventsMatched),'',m.eventsIngested==null&&m.eventsMatched!=null?'Events that matched a rule':'')}${tile('Notifications delivered',n(m.notificationsDelivered),'','')}
       ${tile('Parked after retries',n(m.inDeadLetter),'',m.inDeadLetter==null?'Not measured by this service':'Kept for a person to look at')}${tile('Lost',n(m.lost),'',m.lost==null?'Not measured by this service':'Received minus delivered, parked and suppressed',m.lost===0?'good':m.lost>0?'bad':'')}</div>`;}
 function viewKnowledge(){const docs=HO.data.knowledge||[],K={upload:'Uploaded file',link:'Link',jira:'Jira',confluence:'Confluence',resolution_note:'Resolution note'},tn=id=>((HO.data.teams||[]).find(t=>t.id===id)||{name:id||''}).name;
-  return pageHead({title:'History',desc:'What the team already knows: uploaded documents, links, and the notes people write when they resolve an alert. The next similar alert shows how it was fixed before.'})
+  return pageHead({title:'History'})
     +hoBanner(['knowledge'],'/v1/knowledge')
     +(docs.length?`<div class="tablewrap"><table><thead><tr><th>Title</th><th>Kind</th><th>Team</th><th>Searchable since</th></tr></thead><tbody>${docs.map(k=>`<tr><td>${esc(k.title)}</td><td>${loz(K[k.kind]||k.kind,k.kind==='resolution_note'?'success':'')}</td><td>${esc(tn(k.teamId))}</td><td>${k.indexedAt?ago(Date.parse(k.indexedAt)):'<span class="muted">Being indexed</span>'}</td></tr>`).join('')}</tbody></table></div>`
       :emptyState('book_open','Nothing here yet','Resolve an alert and write how you fixed it: the note is kept here.',''))
     +'<p class="help">Uploading files and connecting Jira or Confluence are not built in this interface yet.</p>';}
-function viewSettings(){const d=HO.data,tab=HO.tab,teams=d.teams||[],tn=id=>((d.teams||[]).find(t=>t.id===id)||{name:id||''}).name,dn=id=>((d.domains||[]).find(x=>x.id===id)||{name:id||''}).name;let body='';
+const SET_TABS=[['notifications','My notifications','','alert','L1'],['escalation','Escalation','','alert_urgent','L3'],['trust','Trust levels','','shield_checkmark','L3'],['integrations','Integrations','','plug_connected','L4'],['org','Organisation','','building_bank','L4']];
+function viewSettings(){const d=HO.data,tabs=SET_TABS.filter(t=>level()>=t[4]),tab=tabs.some(t=>t[0]===HO.tab)?HO.tab:tabs[0][0],teams=d.teams||[],tn=id=>((d.teams||[]).find(t=>t.id===id)||{name:id||''}).name,dn=id=>((d.domains||[]).find(x=>x.id===id)||{name:id||''}).name;let body='';
   if(tab==='escalation'){const origin=(p,k)=>p.origin&&p.origin[k]?loz(HO_ORIGIN[p.origin[k]]||p.origin[k],p.origin[k]==='org'?'':'info'):'';
-    body=hoBanner(['esc'],'/v1/escalation-policies/effective')+`<p class="pdesc">What happens when nobody acknowledges, for ${esc(tn(HO.team)||'the organisation')}. A value is inherited from the level above unless it is overridden here.</p>
-      <div class="pgrid">${(d.esc||[]).map(p=>`<section class="card"><div class="row"><h2 class="grow">${sevTag(p.severity)}</h2>${origin(p,'levels')}</div>
+    body=hoBanner(['esc'],'/v1/escalation-policies/effective')+`<div class="pgrid">${(d.esc||[]).map(p=>`<section class="card"><div class="row"><h2 class="grow">${sevTag(p.severity)}</h2>${origin(p,'levels')}</div>
         <ol class="ladder">${(p.levels||[]).map(l=>`<li><b>Level ${l.level}: ${esc(HO_TARGET[l.target]||l.target)}</b><span>${esc((l.channels||[]).map(c=>HO_CHN[c]||c).join(' and '))}</span>${l.ackTimeoutSeconds?`<small>after ${hoMins(l.ackTimeoutSeconds)} without acknowledgement</small>`:''}</li>`).join('')}</ol>
         <dl class="kv"><dt>Repeat</dt><dd>${p.renotifySeconds?'every '+hoMins(p.renotifySeconds)+' until acknowledged':'No'} ${origin(p,'renotifySeconds')}</dd>
           <dt>Kept informed</dt><dd>${(p.softChannels||[]).length?esc(p.softChannels.map(c=>HO_CHN[c]||c).join(', '))+(p.softDigestMinutes?', one summary every '+p.softDigestMinutes+' min':', at once'):'Nobody'} ${origin(p,p.softDigestMinutes?'softDigestMinutes':'softChannels')}</dd></dl></section>`).join('')}</div>
       <p class="help">Changing a ladder here (override, reset to inherited) is not built in this interface yet.</p>`;}
   else if(tab==='notifications'){const p=d.prefs||{bySeverity:{}},wh=p.workingHours||{};
-    body=hoBanner(['prefs'],'/v1/preferences/me')+`<p class="pdesc">How you want to be told, by severity. A critical alert should reach you wherever you are; a warning can wait in email.</p>
-      <div class="tablewrap"><table><thead><tr><th>Severity</th>${HO_CH.map(c=>`<th>${HO_CHN[c]}</th>`).join('')}</tr></thead><tbody>${HO_SEV.map(s=>`<tr><td>${sevTag(s)}</td>${HO_CH.map(c=>{const on=(p.bySeverity[s]||[]).includes(c);return `<td><button class="lgchk" style="width:auto" role="checkbox" aria-checked="${on}" aria-label="${HO_CHN[c]} for ${s}" data-act="hoPref" data-s="${s}" data-c="${c}"><span class="bx" aria-hidden="true"></span></button></td>`;}).join('')}</tr>`).join('')}</tbody></table></div>
+    body=hoBanner(['prefs'],'/v1/preferences/me')+`<div class="tablewrap"><table><thead><tr><th>Severity</th>${HO_CH.map(c=>`<th>${HO_CHN[c]}</th>`).join('')}</tr></thead><tbody>${HO_SEV.map(s=>`<tr><td>${sevTag(s)}</td>${HO_CH.map(c=>{const on=(p.bySeverity[s]||[]).includes(c);return `<td><button class="lgchk" style="width:auto" role="checkbox" aria-checked="${on}" aria-label="${HO_CHN[c]} for ${s}" data-act="hoPref" data-s="${s}" data-c="${c}"><span class="bx" aria-hidden="true"></span></button></td>`;}).join('')}</tr>`).join('')}</tbody></table></div>
       <dl class="kv"><dt>Working hours</dt><dd>${esc(wh.from||'')} to ${esc(wh.to||'')} ${esc(wh.timezone||'')}</dd></dl>`;}
-  else if(tab==='trust'){body=hoBanner(['trust'],'/v1/action-trust')+`<p class="pdesc">An action starts as a suggestion. After enough approved runs without a failure it may run after approval, then by itself, never above the cap a Domain Root sets.</p>
-      <div class="tablewrap"><table><thead><tr><th>Action</th><th>Domain</th><th>Level now</th><th>Evidence</th><th>Cap</th></tr></thead><tbody>${(d.trust||[]).map(t=>`<tr><td><code>${esc(t.action)}</code></td><td>${esc(dn(t.domainId))}</td><td>${loz(HO_TRUST[t.level]||t.level,t.level==='auto'?'success':t.level==='run_after_approval'?'info':'')}</td>
+  else if(tab==='trust'){body=hoBanner(['trust'],'/v1/action-trust')+`<div class="tablewrap"><table><thead><tr><th>Action</th><th>Domain</th><th>Level now</th><th>Evidence</th><th>Cap</th></tr></thead><tbody>${(d.trust||[]).map(t=>`<tr><td><code>${esc(t.action)}</code></td><td>${esc(dn(t.domainId))}</td><td>${loz(HO_TRUST[t.level]||t.level,t.level==='auto'?'success':t.level==='run_after_approval'?'info':'')}</td>
         <td>${t.successfulApprovedRuns} approved run${t.successfulApprovedRuns===1?'':'s'} without a problem, ${t.failures} failure${t.failures===1?'':'s'}${t.level!=='auto'&&t.promoteAfter?' · moves up after '+t.promoteAfter:''}</td><td>${t.cap?esc(HO_TRUST[t.cap]||t.cap):'<span class="muted">None</span>'}</td></tr>`).join('')}</tbody></table></div>`;}
   else if(tab==='integrations'){const N={datadog:'Datadog',github:'GitHub',jira:'Jira',confluence:'Confluence',llm:'AI model'},soon={jira:1,confluence:1},M={default:'Default provider',own_key:'Your own API key',own_endpoint:'Your own endpoint'};
-    body=hoBanner(['integrations'],'/v1/integrations')+`<p class="pdesc">Read-only connections that give an alert more context. Keys are write-only: once saved they are never shown again.</p>
-      <div class="pgrid">${(d.integrations||[]).map(i=>`<section class="card"><div class="row"><h2 class="grow">${N[i.kind]||esc(i.kind)}</h2>${soon[i.kind]?loz('Coming soon'):loz(i.status==='connected'?'Connected':i.status==='error'?'Error':'Not connected',i.status==='connected'?'success':i.status==='error'?'danger':'')}</div>
+    body=hoBanner(['integrations'],'/v1/integrations')+`<div class="pgrid">${(d.integrations||[]).map(i=>`<section class="card"><div class="row"><h2 class="grow">${N[i.kind]||esc(i.kind)}</h2>${soon[i.kind]?loz('Coming soon'):loz(i.status==='connected'?'Connected':i.status==='error'?'Error':'Not connected',i.status==='connected'?'success':i.status==='error'?'danger':'')}</div>
         <p class="muted" style="margin:0">${i.kind==='llm'?'Used for suggestions and drafts. Mode: '+esc(M[i.mode]||i.mode||'not set')+'.':i.kind==='github'?'Recent commits and pull requests next to an alert.':i.kind==='datadog'?'Logs and metrics around the time of an alert.':'Tickets and pages as knowledge.'}</p></section>`).join('')}</div>
       <p class="help">Connecting an integration from this screen is not built yet.</p>`;}
-  else{body=hoBanner(['domains','teams','users'],'/v1/domains, /v1/teams, /v1/users')+`<p class="pdesc">Permissions flow down: Master, then Domain Root, then Member. Escalation flows up the same way. A team can belong to more than one domain.</p>
-      <h2>Domains</h2><div class="tablewrap"><table><thead><tr><th>Domain</th><th>Domain Root</th></tr></thead><tbody>${(d.domains||[]).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc((x.rootUserIds||[]).map(hoUser).join(', ')||'Nobody yet')}</td></tr>`).join('')}</tbody></table></div>
+  else{body=hoBanner(['domains','teams','users'],'/v1/domains, /v1/teams, /v1/users')+`<h2>Domains</h2><div class="tablewrap"><table><thead><tr><th>Domain</th><th>Domain Root</th></tr></thead><tbody>${(d.domains||[]).map(x=>`<tr><td>${esc(x.name)}</td><td>${esc((x.rootUserIds||[]).map(hoUser).join(', ')||'Nobody yet')}</td></tr>`).join('')}</tbody></table></div>
       <h2>Teams</h2><div class="tablewrap"><table><thead><tr><th>Team</th><th>Domains</th><th>Members</th></tr></thead><tbody>${teams.map(t=>`<tr><td>${esc(t.name)}</td><td>${esc((t.domainIds||[]).map(dn).join(', '))}${(t.domainIds||[]).length>1?' '+loz('Cross-domain','info'):''}</td><td>${esc((t.memberIds||[]).map(hoUser).join(', '))}</td></tr>`).join('')}</tbody></table></div>
       <h2>People</h2><div class="tablewrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody>${(d.users||[]).map(u=>`<tr><td><span class="user">${avatar(u.displayName,true)}${esc(u.displayName)}</span></td><td>${esc(u.email||'')}</td><td>${esc(u.role||'')}</td></tr>`).join('')}</tbody></table></div>`;}
-  return pageHead({title:'Settings'})+tabsHtml('hoTab',tab,[['escalation','Escalation','','alert_urgent'],['notifications','My notifications','','alert'],['trust','Trust levels','','shield_checkmark'],['integrations','Integrations','','plug_connected'],['org','Organisation','','building_bank']])+body;}
+  return pageHead({title:'Settings'})+tabsHtml('hoTab',tab,tabs.map(t=>t.slice(0,4)))+body;}
 const VIEWS={feed:viewFeed,platforms:viewPlatforms,logs:viewLogs,approvals:viewApprovals,oncall:viewOncall,metrics:viewMetrics,knowledge:viewKnowledge,settings:viewSettings,report:viewReport,flows:viewFlows,rules:viewRules,runbooks:viewRunbooks,deliveries:viewDeliveries,preferences:viewPreferences,audit:viewAudit};
 function render(){
   const a=document.activeElement,fid=a&&a.id;let ss=null,se=null;try{ss=a.selectionStart;se=a.selectionEnd;}catch(e){}
@@ -1774,10 +1791,10 @@ function render(){
   if(S.error||!S.ready||S.noTeam){$('nav').innerHTML='';$('drawer').hidden=true;$('scrim').hidden=true;
     $('main').innerHTML=S.noTeam?noTeamHtml():S.error?`<div class="empty"><h2>Cannot reach the service</h2><p class="muted">${esc(S.error)}</p><p class="muted">Start it with <code>docker compose up --build</code>, then try again.</p><button class="btn pri" data-act="reload">Try again</button></div>`:'<p class="muted">Loading…</p>';
     renderToasts();return;}
-  if(!lvCan(S.view))S.view=(LV_VIEWS[level()]||['feed'])[0];
+  if(level()==='L0'&&!lvCan(S.view))S.view='report';
   S.tech=['L2','L3','L4'].includes(level());document.body.classList.toggle('tech',S.tech);
   $('nav').innerHTML=navHtml();lvPrune();
-  $('main').innerHTML=(VIEWS[S.view]||viewFeed)();flMount();
+  $('main').innerHTML=lvPreviewBar()+(lvCan(S.view)?(VIEWS[S.view]||viewFeed)():lvDenied(S.view));flMount();
   $('modal').hidden=!S.newPlat;$('modal').innerHTML=S.newPlat?modalHtml():'';
   let d=null;if(S.drawer){d=S.drawer.kind==='alert'?(S.detail&&S.detail.id===S.drawer.id?S.detail:null):evById(S.drawer.id);if(!d&&S.drawer.kind!=='alert')S.drawer=null;}
   $('drawer').hidden=!d;$('scrim').hidden=!d;
@@ -1797,7 +1814,7 @@ async function smsReply(text){try{const r=await api('/api/sim/reply',{body:{pers
 /* ============ actions ============ */
 const ACT={
   level(el){S.level=el.dataset.v||null;try{if(S.level)localStorage.setItem('herald.level',S.level);else localStorage.removeItem('herald.level');}catch(e){}S.menu=null;S.platform=null;FL.edFor=null;FL.sel=null;
-    if(!lvCan(S.view))go((LV_VIEWS[level()]||['feed'])[0]);loadView().then(render,()=>{});},
+    if(level()==='L0'&&!lvCan(S.view))go('report');loadView().then(render,()=>{});},
   rpImpact(el){RP.impact=el.dataset.v;},
   rpSend(){const text=RP.text.trim();if(text.length<8)return;const im=RP_IMPACT[RP.impact],id='R-'+Date.now().toString(36).toUpperCase();
     const ev={type:'USER_REPORT',report_id:id,severity:im[1],system:RP.sys||'Not sure',summary:text.split(/[.\n]/)[0].slice(0,90),message:text,impact:im[0],reporter:pname(me())||'Someone',reported_at:new Date().toISOString()};
